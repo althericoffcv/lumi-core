@@ -1,0 +1,20 @@
+{
+  "name": "Lumi Base",
+  "version": "1.0.0",
+  "description": "Open REST API by Altheric Official — no authentication required.",
+  "author": "Altheric Official",
+  "baseUrl": "https://api.lumi-base.my.id",
+  "banner": "image/191851aefde677526f000487a23d4f8a.gif",
+  "categories": [
+    {
+      "name": "Search",
+      "items": [
+        {
+          "name": "Pinterest",
+          "desc": "Search images on Pinterest",
+          "path": "/search/pinterest?q="
+        }
+      ]
+    }
+  ]
+}
