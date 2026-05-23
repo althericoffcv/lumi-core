@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lumi Base · API</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;700&family=Bebas+Neue&family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:       #0a0a08;
+      --surface:  #111110;
+      --border:   #2a2a24;
+      --border2:  #1e1e18;
+      --cream:    #e8e0cc;
+      --amber:    #d4a843;
+      --amber2:   #f0c060;
+      --green:    #7ab648;
+      --red:      #c94040;
+      --muted:    #6b6a5e;
+      --text:     #ccc7b8;
+      --mono:     'IBM Plex Mono', monospace;
+      --display:  'Bebas Neue', sans-serif;
+      --sans:     'Space Grotesk', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── RETRO GRID BACKGROUND ─────────────────────────────── */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(212,168,67,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(212,168,67,.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    .grid-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(212,168,67,.12) 0%, transparent 60%),
+        radial-gradient(ellipse 100% 60% at 50% 100%, rgba(10,10,8,.9) 0%, transparent 70%);
+    }
+
+    /* ── SCANLINE OVERLAY ──────────────────────────────────── */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,.12) 2px,
+        rgba(0,0,0,.12) 4px
+      );
+    }
+
+    /* ── LAYOUT ────────────────────────────────────────────── */
+    .wrap {
+      position: relative;
+      z-index: 2;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── HEADER ────────────────────────────────────────────── */
+    header {
+      padding: 52px 0 40px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    .header-tag {
+      font-size: 10px;
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 16px;
+      opacity: .8;
+    }
+
+    .logo-line {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .logo {
+      font-family: var(--display);
+      font-size: clamp(52px, 9vw, 88px);
+      letter-spacing: .04em;
+      color: var(--cream);
+      line-height: 1;
+      position: relative;
+    }
+
+    .logo span {
+      color: var(--amber);
+    }
+
+    .version-badge {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--amber);
+      background: rgba(212,168,67,.08);
+      border: 1px solid rgba(212,168,67,.2);
+      padding: 3px 8px;
+      border-radius: 2px;
+      letter-spacing: .1em;
+      align-self: center;
+    }
+
+    .header-desc {
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 300;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .header-meta {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      font-size: 11px;
+      letter-spacing: .08em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .meta-item .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .5; transform: scale(.8); }
+    }
+
+    /* ── SECTION LABEL ─────────────────────────────────────── */
+    .section-label {
+      font-size: 10px;
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: .7;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── ENDPOINT CARD ─────────────────────────────────────── */
+    .endpoint {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .endpoint::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--amber), transparent);
+    }
+
+    /* corner decorations */
+    .endpoint::after {
+      content: '◈';
+      position: absolute;
+      bottom: 8px;
+      right: 12px;
+      font-size: 14px;
+      color: var(--border);
+    }
+
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border2);
+      flex-wrap: wrap;
+    }
+
+    .method {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      padding: 4px 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .method-get {
+      background: rgba(122,182,72,.12);
+      color: var(--green);
+      border: 1px solid rgba(122,182,72,.25);
+    }
+
+    .endpoint-path {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--cream);
+      letter-spacing: .03em;
+      flex: 1;
+    }
+
+    .endpoint-path .param {
+      color: var(--amber2);
+    }
+
+    .endpoint-desc {
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--muted);
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .endpoint-body {
+      padding: 20px;
+    }
+
+    /* ── PARAMS TABLE ──────────────────────────────────────── */
+    .params-label {
+      font-size: 10px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .params-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+
+    .params-table th {
+      text-align: left;
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--border2);
+    }
+
+    .params-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border2);
+      vertical-align: top;
+    }
+
+    .params-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .param-name {
+      color: var(--amber2);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .param-type {
+      color: var(--green);
+      font-size: 11px;
+    }
+
+    .required-tag {
+      font-size: 9px;
+      padding: 1px 5px;
+      background: rgba(201,64,64,.1);
+      border: 1px solid rgba(201,64,64,.2);
+      color: var(--red);
+      border-radius: 2px;
+      letter-spacing: .08em;
+    }
+
+    .optional-tag {
+      font-size: 9px;
+      padding: 1px 5px;
+      background: rgba(107,106,94,.1);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 2px;
+      letter-spacing: .08em;
+    }
+
+    /* ── CODE BLOCK ────────────────────────────────────────── */
+    .code-label {
+      font-size: 10px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+      margin-top: 16px;
+    }
+
+    .code-block {
+      background: #0d0d0b;
+      border: 1px solid var(--border2);
+      padding: 16px;
+      font-size: 12px;
+      line-height: 1.7;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .code-block .cb-url  { color: var(--cream); }
+    .code-block .cb-key  { color: var(--amber2); }
+    .code-block .cb-str  { color: #88c887; }
+    .code-block .cb-num  { color: #cf9eff; }
+    .code-block .cb-bool { color: var(--amber); }
+    .code-block .cb-null { color: var(--muted); }
+    .code-block .cb-comment { color: var(--muted); font-style: italic; }
+
+    /* ── LIVE TESTER ───────────────────────────────────────── */
+    .tester {
+      background: #0d0d0b;
+      border: 1px solid var(--border2);
+      margin-top: 20px;
+    }
+
+    .tester-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border2);
+      font-size: 10px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tester-header::before {
+      content: '▶';
+      font-size: 9px;
+      color: var(--amber);
+    }
+
+    .tester-body {
+      padding: 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tester-input {
+      flex: 1;
+      min-width: 160px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--cream);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .tester-input::placeholder { color: var(--muted); }
+    .tester-input:focus { border-color: var(--amber); }
+
+    .tester-btn {
+      background: var(--amber);
+      color: var(--bg);
+      border: none;
+      padding: 8px 20px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      flex-shrink: 0;
+    }
+
+    .tester-btn:hover  { background: var(--amber2); }
+    .tester-btn:active { transform: scale(.98); }
+
+    .tester-btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .tester-result {
+      display: none;
+      border-top: 1px solid var(--border2);
+      padding: 16px;
+      font-size: 11px;
+      line-height: 1.6;
+      max-height: 360px;
+      overflow-y: auto;
+      color: var(--text);
+    }
+
+    .tester-result.show { display: block; }
+
+    .tester-result.error { color: var(--red); }
+
+    /* ── RESPONSE SCHEMA ───────────────────────────────────── */
+    .schema {
+      margin-top: 20px;
+    }
+
+    .schema-row {
+      display: grid;
+      grid-template-columns: 160px 80px 1fr;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border2);
+      font-size: 12px;
+      align-items: start;
+    }
+
+    .schema-row:last-child { border-bottom: none; }
+
+    .schema-field { color: var(--amber2); }
+    .schema-type  { color: var(--green); font-size: 11px; }
+    .schema-note  { color: var(--muted); font-family: var(--sans); font-size: 12px; }
+
+    /* ── FOOTER ────────────────────────────────────────────── */
+    footer {
+      position: relative;
+      z-index: 2;
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .08em;
+    }
+
+    footer strong { color: var(--amber); font-weight: 400; }
+
+    /* corner ticks */
+    .corner-tl, .corner-tr, .corner-bl, .corner-br {
+      position: absolute;
+      width: 12px; height: 12px;
+      border-color: var(--border);
+      border-style: solid;
+    }
+    .corner-tl { top: 0; left: 0; border-width: 1px 0 0 1px; }
+    .corner-tr { top: 0; right: 0; border-width: 1px 1px 0 0; }
+    .corner-bl { bottom: 0; left: 0; border-width: 0 0 1px 1px; }
+    .corner-br { bottom: 0; right: 0; border-width: 0 1px 1px 0; }
+
+    /* ── PINTEREST GRID PREVIEW ────────────────────────────── */
+    .pin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .pin-item {
+      aspect-ratio: 3/4;
+      background: var(--border2);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .pin-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      opacity: 0;
+      transition: opacity .3s;
+    }
+
+    .pin-item img.loaded { opacity: 1; }
+
+    .pin-caption {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,.8));
+      padding: 12px 6px 6px;
+      font-size: 9px;
+      color: var(--cream);
+      opacity: 0;
+      transition: opacity .2s;
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pin-item:hover .pin-caption { opacity: 1; }
+
+    .loading-dots {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .loading-dots span {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--amber);
+      animation: blink 1.2s ease-in-out infinite;
+    }
+
+    .loading-dots span:nth-child(2) { animation-delay: .2s; }
+    .loading-dots span:nth-child(3) { animation-delay: .4s; }
+
+    @keyframes blink {
+      0%, 100% { opacity: .2; }
+      50%       { opacity: 1; }
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--amber); }
+  </style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="scanlines"></div>
+
+<div class="wrap">
+
+  <!-- ── HEADER ─────────────────────────────────────── -->
+  <header>
+    <div class="header-tag">// rest api documentation</div>
+    <div class="logo-line">
+      <div class="logo">LUMI <span>BASE</span></div>
+      <div class="version-badge">v1.0.0</div>
+    </div>
+    <div class="header-desc">
+      A minimal, open REST API by Altheric Official.
+      No authentication required. Rate limit: 60 req/min.
+    </div>
+    <div class="header-meta">
+      <div class="meta-item">
+        <span class="dot"></span>
+        ONLINE
+      </div>
+      <div class="meta-item">BASE_URL: <code>https://your-domain.com</code></div>
+      <div class="meta-item">FORMAT: JSON</div>
+    </div>
+  </header>
+
+  <!-- ── SEARCH CATEGORY ────────────────────────────── -->
+  <div class="section-label">Search</div>
+
+  <!-- ── ENDPOINT: Pinterest Search ────────────────── -->
+  <div class="endpoint">
+    <div class="corner-tl"></div>
+    <div class="corner-tr"></div>
+    <div class="corner-bl"></div>
+    <div class="corner-br"></div>
+
+    <div class="endpoint-header">
+      <span class="method method-get">GET</span>
+      <span class="endpoint-path">/search/pinterest<span class="param">?q=</span><span class="param">{query}</span></span>
+      <span class="endpoint-desc">Pinterest Image Search</span>
+    </div>
+
+    <div class="endpoint-body">
+
+      <div class="params-label">// parameters</div>
+      <table class="params-table">
+        <thead>
+          <tr>
+            <th>PARAM</th>
+            <th>TYPE</th>
+            <th>STATUS</th>
+            <th>DESCRIPTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param-name">q</td>
+            <td class="param-type">string</td>
+            <td><span class="required-tag">REQUIRED</span></td>
+            <td style="color:var(--text);font-family:var(--sans);font-size:12px;">Search keyword (e.g. <code style="color:var(--amber2)">anime</code>, <code style="color:var(--amber2)">sunset</code>)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="code-label">// example request</div>
+      <div class="code-block">
+        <span class="cb-comment"># GET request</span><br>
+        <span class="cb-url">GET /search/pinterest?q=</span><span class="cb-str">aesthetic</span>
+      </div>
+
+      <div class="code-label">// example response</div>
+      <div class="code-block">
+<span class="cb-key">{</span><br>
+&nbsp;&nbsp;<span class="cb-key">"status"</span>: <span class="cb-bool">true</span>,<br>
+&nbsp;&nbsp;<span class="cb-key">"query"</span>: <span class="cb-str">"aesthetic"</span>,<br>
+&nbsp;&nbsp;<span class="cb-key">"total"</span>: <span class="cb-num">20</span>,<br>
+&nbsp;&nbsp;<span class="cb-key">"data"</span>: [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"id"</span>: <span class="cb-str">"123456789"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"caption"</span>: <span class="cb-str">"dark aesthetic room"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"image"</span>: <span class="cb-str">"https://i.pinimg.com/originals/..."</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"source"</span>: <span class="cb-str">"https://id.pinterest.com/pin/123456789"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"uploader"</span>: <span class="cb-key">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"username"</span>: <span class="cb-str">"user123"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"fullname"</span>: <span class="cb-str">"Jane Doe"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">"followers"</span>: <span class="cb-num">4200</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cb-key">}</span><br>
+&nbsp;&nbsp;]<br>
+<span class="cb-key">}</span>
+      </div>
+
+      <!-- ── LIVE TESTER ─────────────────────────────── -->
+      <div class="tester">
+        <div class="tester-header">Live Tester</div>
+        <div class="tester-body">
+          <input
+            class="tester-input"
+            id="pin-query"
+            type="text"
+            placeholder="Enter search keyword..."
+            autocomplete="off"
+          />
+          <button class="tester-btn" id="pin-btn" onclick="runPinterest()">
+            Run
+          </button>
+        </div>
+        <div class="tester-result" id="pin-result"></div>
+        <div class="pin-grid" id="pin-grid" style="padding:0 16px 16px;display:none;"></div>
+      </div>
+
+      <!-- ── RESPONSE SCHEMA ───────────────────────── -->
+      <div class="code-label">// response schema</div>
+      <div class="schema">
+        <div class="schema-row">
+          <span class="schema-field">status</span>
+          <span class="schema-type">boolean</span>
+          <span class="schema-note">Request success flag</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-field">query</span>
+          <span class="schema-type">string</span>
+          <span class="schema-note">The search keyword used</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-field">total</span>
+          <span class="schema-type">number</span>
+          <span class="schema-note">Number of results returned (max 20)</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-field">data[].id</span>
+          <span class="schema-type">string</span>
+          <span class="schema-note">Pinterest pin ID</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-field">data[].caption</span>
+          <span class="schema-type">string</span>
+          <span class="schema-note">Pin title / grid caption</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-field">data[].image</span>
+          <span class="schema-type">string</span>
+          <span class="schema-note">Original image URL (direct link)</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-field">data[].source</span>
+          <span class="schema-type">string</span>
+          <span class="schema-note">Pin URL on Pinterest</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-field">data[].uploader</span>
+          <span class="schema-type">object</span>
+          <span class="schema-note">Pinner info: username, fullname, followers</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── ERROR RESPONSES ────────────────────────────── -->
+  <div class="section-label">Error Codes</div>
+
+  <div class="endpoint" style="margin-bottom:0;">
+    <div class="corner-tl"></div><div class="corner-tr"></div>
+    <div class="corner-bl"></div><div class="corner-br"></div>
+    <div class="endpoint-body">
+      <div class="schema">
+        <div class="schema-row">
+          <span class="schema-field" style="color:var(--red)">400</span>
+          <span class="schema-type">Bad Request</span>
+          <span class="schema-note">Missing required parameter</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-field" style="color:var(--amber)">404</span>
+          <span class="schema-type">Not Found</span>
+          <span class="schema-note">No results found for the query</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-field" style="color:var(--amber)">429</span>
+          <span class="schema-type">Too Many Requests</span>
+          <span class="schema-note">Rate limit exceeded (60 req/min)</span>
+        </div>
+        <div class="schema-row">
+          <span class="schema-field" style="color:var(--red)">500</span>
+          <span class="schema-type">Server Error</span>
+          <span class="schema-note">Upstream scraping failed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<footer>
+  <strong>LUMI BASE</strong> &nbsp;·&nbsp; by Altheric Official &nbsp;·&nbsp; Open REST API
+</footer>
+
+<script>
+  // ── Live tester: Pinterest ──────────────────────────────────────────────────
+  async function runPinterest() {
+    const q   = document.getElementById('pin-query').value.trim();
+    const btn = document.getElementById('pin-btn');
+    const res = document.getElementById('pin-result');
+    const grd = document.getElementById('pin-grid');
+
+    if (!q) {
+      res.className = 'tester-result show error';
+      res.textContent = '✖ Please enter a search keyword.';
+      grd.style.display = 'none';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
+    res.className = 'tester-result show';
+    res.style.color = 'var(--muted)';
+    res.textContent = 'Fetching…';
+    grd.style.display = 'none';
+
+    try {
+      const response = await fetch(`/search/pinterest?q=${encodeURIComponent(q)}`);
+      const json     = await response.json();
+
+      res.style.color = '';
+      res.textContent = JSON.stringify(json, null, 2);
+
+      if (json.status && json.data?.length) {
+        grd.style.display = 'grid';
+        grd.innerHTML = '';
+        json.data.slice(0, 12).forEach(pin => {
+          const item = document.createElement('div');
+          item.className = 'pin-item';
+
+          const img = document.createElement('img');
+          img.alt = pin.caption || '';
+          img.onload  = () => img.classList.add('loaded');
+          img.onerror = () => item.style.background = 'var(--border)';
+          img.src = pin.image;
+
+          const cap = document.createElement('div');
+          cap.className = 'pin-caption';
+          cap.textContent = pin.caption || '';
+
+          item.appendChild(img);
+          item.appendChild(cap);
+          grd.appendChild(item);
+        });
+      }
+    } catch (err) {
+      res.className = 'tester-result show error';
+      res.textContent = '✖ Request failed: ' + err.message;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Run';
+  }
+
+  // Enter key
+  document.getElementById('pin-query').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') runPinterest();
+  });
+</script>
+
+</body>
+</html>
