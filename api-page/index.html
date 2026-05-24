@@ -143,9 +143,11 @@ header{padding:56px 0 40px;border-bottom:1px solid var(--border);margin-bottom:4
 .tree-horiz{position:absolute;left:24px;top:50%;width:9px;height:1px;background:var(--border);}
 .ep-method{font-size:9px;font-weight:500;letter-spacing:.1em;padding:2px 7px;border-radius:2px;flex-shrink:0;background:rgba(61,168,94,.1);color:#3da85e;border:1px solid rgba(61,168,94,.22);}
 .ep-name{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.ep-desc{font-size:11px;color:var(--muted2);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
-.ep-copy{font-size:9px;color:var(--muted2);background:var(--surface);border:1px solid var(--border);padding:3px 9px;border-radius:10px;cursor:pointer;letter-spacing:.05em;transition:background .1s,color .1s,border .1s;white-space:nowrap;flex-shrink:0;}
+.ep-desc{display:none;}
+.ep-desc-inline{font-size:11px;color:var(--muted2);font-weight:400;}
+.ep-copy{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted2);flex-shrink:0;transition:background .1s,color .1s,border .1s;}
 .ep-copy:hover,.ep-copy.copied{background:var(--accent3);color:var(--accent);border-color:var(--accent2);}
+.ep-copy svg{width:13px;height:13px;pointer-events:none;}
 
 .detail-panel{display:none;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);margin-bottom:16px;position:relative;transition:background .2s,border .2s;}
 .detail-panel.show{display:block;}
@@ -385,9 +387,8 @@ function buildFolders(categories, baseUrl) {
         <div class="tree-vert"></div>
         <div class="tree-horiz"></div>
         <span class="ep-method">GET</span>
-        <span class="ep-name">${item.name}</span>
-        <span class="ep-desc">${item.desc || ''}</span>
-        <span class="ep-copy" id="copy-${epId}" onclick="copyEndpoint(event,'${epId}','${baseUrl}${item.path}')">Copy URL</span>`;
+        <span class="ep-name">${item.name}<span class="ep-desc-inline">${item.desc ? ' — ' + item.desc : ''}</span></span>
+        <span class="ep-copy" id="copy-${epId}" title="Copy URL" onclick="copyEndpoint(event,'${epId}','${baseUrl}${item.path}')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2H3.5A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg></span>`;
       row.onclick = (e) => {
         if (e.target.classList.contains('ep-copy')) return;
         toggleDetail(epId);
@@ -541,7 +542,8 @@ async function runGeneric(epId, pathBase, paramKeys) {
   const res = document.getElementById('gres-' + epId);
   const btn = document.getElementById('gbtn-' + epId);
 
-  let url = pathBase;
+  const apiBase = (typeof BASE_URL !== 'undefined' ? BASE_URL : '') ;
+  let url = apiBase + pathBase;
   if (paramKeys.length) {
     const pairs = paramKeys.map(k => {
       const val = document.getElementById(`gf-${epId}-${k}`)?.value.trim() || '';
