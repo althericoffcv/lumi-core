@@ -190,6 +190,20 @@
   box-shadow: 2px 2px 0 #1a1a1a !important;
 }
 
+
+#loader-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  transition:opacity .5s ease, visibility .5s ease;
+}
+#loader-screen.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+.loader-logo{font-family:'Playfair Display',serif;font-size:42px;font-weight:900;color:var(--text);line-height:1;}
+.loader-logo em{font-style:italic;color:var(--accent);}
+.loader-bar-wrap{width:180px;height:2px;background:var(--border);border-radius:1px;overflow:hidden;}
+.loader-bar{height:100%;width:0%;background:var(--accent);border-radius:1px;transition:width .3s ease;}
+.loader-text{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--muted2);}
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
 body{
@@ -437,6 +451,13 @@ footer strong{color:var(--accent);font-weight:400;}
 </head>
 <body>
 
+
+<div id="loader-screen">
+  <div class="loader-logo">Lumi <em>Base</em></div>
+  <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
+  <div class="loader-text" id="loader-text">Memuat assets...</div>
+</div>
+
 <div class="grid-bg"></div>
 <div class="scanlines"></div>
 <canvas id="threed-canvas"></canvas>
@@ -568,6 +589,7 @@ function applySettings(cfg) {
 
   document.title = `${cfg.name || 'Lumi Base'} · API`;
   buildFolders(cfg.categories || [], cfg.baseUrl || BASE_URL);
+  if (window._loaderDone) window._loaderDone();
 }
 
 function buildFolders(categories, baseUrl) {
@@ -896,66 +918,21 @@ async function runGenericDirect(pathBase, params, inputs, btn, stat, res) {
   res.textContent = '';
 
   try {
-    var r = await fetch(url, { cache: 'no-store' });
-    var ct = r.headers.get('Content-Type') || '';
-
-    if (!r.ok) {
-      var errText = await r.text();
-      var errMsg = '';
-      try { errMsg = JSON.parse(errText).message || ''; } catch(e) {}
-      setStatus('fail', '✖ HTTP ' + r.status + (errMsg ? ' — ' + errMsg : ''));
+    var r = await fetch(url, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+    var raw = await r.text();
+    try {
+      var json = JSON.parse(raw);
+      setStatus(r.ok ? 'ok' : 'fail',
+        r.ok ? '✓ ' + r.status + ' OK' + (json.total != null ? ' — ' + json.total + ' hasil' : '')
+              : '✖ HTTP ' + r.status + (json.message ? ' — ' + json.message : ''));
       res.style.display = 'block';
-      res.className = 'generic-result show err';
-      res.textContent = errText.slice(0, 1000);
-    } else if (ct.startsWith('image/')) {
-      var blob = await r.blob();
-      var blobUrl = URL.createObjectURL(blob);
-      setStatus('ok', '✓ ' + r.status + ' OK — ' + ct.split('/')[1].toUpperCase());
+      res.className = 'generic-result show' + (r.ok ? '' : ' err');
+      res.textContent = JSON.stringify(json, null, 2);
+    } catch(e) {
+      setStatus(r.ok ? 'ok' : 'fail', r.ok ? '✓ ' + r.status : '✖ HTTP ' + r.status);
       res.style.display = 'block';
-      res.className = 'generic-result show';
-      res.innerHTML = '';
-      var img = document.createElement('img');
-      img.src = blobUrl;
-      img.style.cssText = 'max-width:100%;max-height:400px;display:block;border-radius:4px;';
-      var dl = document.createElement('a');
-      dl.href = blobUrl;
-      dl.download = 'result.' + (ct.split('/')[1] || 'png');
-      dl.textContent = '⬇ Download';
-      dl.style.cssText = 'display:inline-block;margin-top:8px;font-size:11px;color:var(--accent);';
-      res.appendChild(img);
-      res.appendChild(dl);
-    } else if (ct.startsWith('video/')) {
-      var blob = await r.blob();
-      var blobUrl = URL.createObjectURL(blob);
-      setStatus('ok', '✓ ' + r.status + ' OK — VIDEO');
-      res.style.display = 'block';
-      res.className = 'generic-result show';
-      res.innerHTML = '';
-      var vid = document.createElement('video');
-      vid.src = blobUrl;
-      vid.controls = true;
-      vid.style.cssText = 'max-width:100%;max-height:400px;display:block;border-radius:4px;';
-      var dl = document.createElement('a');
-      dl.href = blobUrl;
-      dl.download = 'result.' + (ct.split('/')[1] || 'mp4');
-      dl.textContent = '⬇ Download';
-      dl.style.cssText = 'display:inline-block;margin-top:8px;font-size:11px;color:var(--accent);';
-      res.appendChild(vid);
-      res.appendChild(dl);
-    } else {
-      var raw = await r.text();
-      try {
-        var json = JSON.parse(raw);
-        setStatus('ok', '✓ ' + r.status + ' OK' + (json.total != null ? ' — ' + json.total + ' hasil' : ''));
-        res.style.display = 'block';
-        res.className = 'generic-result show';
-        res.textContent = JSON.stringify(json, null, 2);
-      } catch(e) {
-        setStatus('ok', '✓ ' + r.status);
-        res.style.display = 'block';
-        res.className = 'generic-result show';
-        res.textContent = raw.slice(0, 1000);
-      }
+      res.className = 'generic-result show' + (r.ok ? '' : ' err');
+      res.textContent = raw.slice(0, 1000);
     }
   } catch(err) {
     setStatus('fail', '✖ ' + err.message);
@@ -1072,6 +1049,36 @@ document.querySelectorAll('.tdot').forEach(function(dot) {
       d.classList.toggle('active', d.dataset.theme === saved);
     });
   }
+})();
+
+
+(function() {
+  var bar  = document.getElementById('loader-bar');
+  var text = document.getElementById('loader-text');
+  var msgs = ['Memuat assets...', 'Menghubungkan API...', 'Menyiapkan endpoint...', 'Hampir selesai...'];
+  var prog = 0;
+  var mi   = 0;
+
+  function tick() {
+    prog += Math.random() * 18 + 8;
+    if (prog > 88) prog = 88;
+    if (bar)  bar.style.width  = prog + '%';
+    if (text) text.textContent = msgs[Math.min(mi, msgs.length - 1)];
+    mi++;
+  }
+
+  var iv = setInterval(tick, 380);
+  tick();
+
+  window._loaderDone = function() {
+    clearInterval(iv);
+    if (bar)  bar.style.width  = '100%';
+    if (text) text.textContent = 'Siap!';
+    setTimeout(function() {
+      var el = document.getElementById('loader-screen');
+      if (el) el.classList.add('hidden');
+    }, 350);
+  };
 })();
 
 loadSettings();
