@@ -1,13 +1,7 @@
 const { createCanvas, GlobalFonts } = require('@napi-rs/canvas');
 const path = require('path');
-const fs = require('fs');
 
-const fontPath = path.join(__dirname, '../../fonts/Arimo.ttf');
-if (fs.existsSync(fontPath)) {
-    GlobalFonts.registerFromPath(fontPath, 'Arimo');
-} else {
-    console.error('[brat] font not found at:', fontPath);
-}
+GlobalFonts.registerFromPath(path.join(process.cwd(), 'font/Arimo.ttf'), 'Arimo');
 
 module.exports = (app) => {
     app.get('/canvas/brat', (req, res) => {
@@ -16,13 +10,6 @@ module.exports = (app) => {
 
             if (!raw.trim()) {
                 return res.status(400).json({ status: false, message: 'Query parameter ?text= is required' });
-            }
-
-            const families = GlobalFonts.families.map(f => f.family);
-            console.log('[brat] registered fonts:', families);
-
-            if (!families.includes('Arimo')) {
-                return res.status(500).json({ status: false, message: 'Font Arimo not loaded. families: ' + families.join(', ') });
             }
 
             const text  = raw.toLowerCase();
@@ -83,7 +70,6 @@ module.exports = (app) => {
             res.end(buffer, 'binary');
 
         } catch (err) {
-            console.error('[brat] error:', err);
             res.status(500).json({ status: false, message: err.message });
         }
     });
