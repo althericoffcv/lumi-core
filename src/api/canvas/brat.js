@@ -1,4 +1,7 @@
-const { createCanvas } = require('@napi-rs/canvas');
+const { createCanvas, GlobalFonts } = require('@napi-rs/canvas');
+const path = require('path');
+
+GlobalFonts.registerFromPath(path.join(__dirname, '../../fonts/Arimo.ttf'), 'Arimo');
 
 module.exports = (app) => {
     app.get('/canvas/brat', async (req, res) => {
@@ -26,7 +29,7 @@ module.exports = (app) => {
             ctx.textBaseline = 'middle';
 
             const setFont = (size) => {
-                ctx.font = `${size}px "DejaVu Sans"`;
+                ctx.font = `${size}px Arimo`;
             };
 
             const wrapText = (txt, maxW, size) => {
