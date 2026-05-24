@@ -17,21 +17,17 @@ function isYoutube(url) {
     return /^https?:\/\/(www\.)?(youtube\.com\/(watch\?v=|shorts\/)|youtu\.be\/)/.test(url.trim());
 }
 
-/**
- * ENDPOINT: GET /downloader/youtube?url=https://youtu.be/xxxx
- * Desc    : Download video YouTube, return link MP4 dan MP3/M4A
- */
-module.exports = function (app) {
+module.exports = function(app) {
     app.get('/downloader/youtube', async (req, res) => {
         const { url } = req.query;
 
         if (!url) return res.status(400).json({
-            status:  false,
+            status: false,
             message: "Parameter 'url' wajib diisi! Contoh: /downloader/youtube?url=https://youtu.be/xxxx",
         });
 
         if (!isYoutube(url)) return res.status(400).json({
-            status:  false,
+            status: false,
             message: 'URL bukan YouTube yang valid.',
         });
 
@@ -42,7 +38,6 @@ module.exports = function (app) {
                 timeout: 30000,
             });
 
-            // response dibungkus dalam data.api
             const api   = data?.api || {};
             const items = api.mediaItems || [];
 
@@ -61,27 +56,24 @@ module.exports = function (app) {
             const mp3 = items
                 .filter(i => i.type === 'Audio')
                 .map(i => ({
-                    quality:   i.mediaQuality,
-                    format:    i.mediaExtension,
-                    url:       i.mediaUrl,
-                    size:      i.mediaFileSize || null,
-                    duration:  i.mediaDuration || null,
+                    quality:  i.mediaQuality,
+                    format:   i.mediaExtension,
+                    url:      i.mediaUrl,
+                    size:     i.mediaFileSize || null,
+                    duration: i.mediaDuration || null,
                 }));
 
             res.json({
                 status:    true,
                 url,
-                title:     api.title     || null,
+                title:     api.title || null,
                 thumbnail: api.imagePreviewUrl || null,
                 duration:  items[0]?.mediaDuration || null,
                 mp4,
                 mp3,
             });
         } catch (err) {
-            res.status(500).json({
-                status:  false,
-                message: err.message,
-            });
+            res.status(500).json({ status: false, message: err.message });
         }
     });
 };
