@@ -339,7 +339,7 @@ async function loadSettings() {
     var fetched = false;
     for (var i = 0; i < urls.length; i++) {
       try {
-        var r = await fetch(urls[i]);
+        var r = await fetch(urls[i], { cache: 'no-store' });
         if (r.ok) {
           var data = await r.json();
           if (data && data.name) {
@@ -599,7 +599,7 @@ async function runGeneric(epId, pathBase, paramKeys) {
   if (res) { res.style.display = 'none'; res.textContent = ''; }
 
   try {
-    var r = await fetch(url);
+    var r = await fetch(url, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
     var raw = await r.text();
     var display, isErr = false;
     try {
