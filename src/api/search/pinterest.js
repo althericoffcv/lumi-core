@@ -2,21 +2,13 @@ const axios = require('axios');
 
 module.exports = function(app) {
 
-    // ─── HELPERS ────────────────────────────────────────────────────────────────
-
     function isPin(url) {
         if (!url) return false;
         const patterns = [
             /^https?:\/\/(?:www\.)?pinterest\.com\/pin\/[\w.-]+/,
             /^https?:\/\/(?:www\.)?pinterest\.[\w.]+\/pin\/[\w.-]+/,
-            /^https?:\/\/(?:www\.)?pinterest\.(?:ca|co\.uk|com\.au|de|fr|id|es|mx|br|pt|jp|kr|nz|ru|at|be|ch|cl|dk|fi|gr|ie|nl|no|pl|se|th|tr)\/pin\/[\w.-]+/,
             /^https?:\/\/pin\.it\/[\w.-]+/,
-            /^https?:\/\/(?:www\.)?pinterest\.com\/amp\/pin\/[\w.-]+/,
             /^https?:\/\/(?:[a-z]{2}|www)\.pinterest\.com\/pin\/[\w.-]+/,
-            /^https?:\/\/(?:www\.)?pinterest\.com\/pin\/[\d]+(?:\/)?$/,
-            /^https?:\/\/(?:www\.)?pinterest\.[\w.]+\/pin\/[\d]+(?:\/)?$/,
-            /^https?:\/\/(?:www\.)?pinterestcn\.com\/pin\/[\w.-]+/,
-            /^https?:\/\/(?:www\.)?pinterest\.com\.[\w.]+\/pin\/[\w.-]+/,
         ];
         return patterns.some(p => p.test(url.trim().toLowerCase()));
     }
@@ -48,8 +40,6 @@ module.exports = function(app) {
         };
     }
 
-    // ─── CORE FUNCTIONS ─────────────────────────────────────────────────────────
-
     async function pinterest(query, limit = 20) {
         const { cookieStr, csrfToken } = await getCookies();
 
@@ -70,14 +60,9 @@ module.exports = function(app) {
 
         const headers = {
             'accept': 'application/json, text/javascript, */*, q=0.01',
-            'accept-encoding': 'gzip, deflate, br',
             'accept-language': 'en-US,en;q=0.9',
             'cookie': cookieStr,
-            'dnt': '1',
             'referer': `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(query)}&rs=typed`,
-            'sec-fetch-dest': 'empty',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-site': 'same-origin',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
             'x-app-version': 'c056fb7',
             'x-pinterest-appstate': 'active',
@@ -88,7 +73,6 @@ module.exports = function(app) {
         };
 
         const { data } = await axios.get('https://www.pinterest.com/resource/BaseSearchResource/get/', { headers, params });
-
         const results = data.resource_response.data.results.filter(v => v.images?.orig);
 
         return results.slice(0, limit).map(r => ({
@@ -170,20 +154,9 @@ module.exports = function(app) {
             });
         }
 
-        return {
-            id: pd.id,
-            title: pd.title || '',
-            description: pd.description || '',
-            media
-        };
+        return { id: pd.id, title: pd.title || '', description: pd.description || '', media };
     }
 
-    // ─── ENDPOINTS ──────────────────────────────────────────────────────────────
-
-    /**
-     * ENDPOINT: GET /search/pinterest?q=anime
-     * Desc: Search Pinterest images by keyword, auto limit 20
-     */
     app.get('/search/pinterest', async (req, res) => {
         const { q } = req.query;
 
@@ -194,31 +167,16 @@ module.exports = function(app) {
 
         try {
             const hasil = await pinterest(q, 20);
-
             if (!hasil || hasil.length === 0) return res.status(404).json({
                 status: false,
                 message: `Tidak ada hasil untuk "${q}"`
             });
-
-            res.json({
-                status: true,
-                query: q,
-                total: hasil.length,
-                data: hasil
-            });
-
+            res.json({ status: true, query: q, total: hasil.length, data: hasil });
         } catch (err) {
-            res.status(500).json({
-                status: false,
-                message: err.message
-            });
+            res.status(500).json({ status: false, message: err.message });
         }
     });
 
-    /**
-     * ENDPOINT: GET /downloader/pinterest?url=https://www.pinterest.com/pin/xxx
-     * Desc: Get download info (image/video) dari Pinterest pin URL
-     */
     app.get('/downloader/pinterest', async (req, res) => {
         const { url } = req.query;
 
@@ -229,24 +187,14 @@ module.exports = function(app) {
 
         if (!isPin(url)) return res.status(400).json({
             status: false,
-            message: "URL bukan pin Pinterest yang valid"
+            message: 'URL bukan pin Pinterest yang valid'
         });
 
         try {
             const result = await pindl(url);
-
-            res.json({
-                status: true,
-                url,
-                data: result
-            });
-
+            res.json({ status: true, url, data: result });
         } catch (err) {
-            res.status(500).json({
-                status: false,
-                message: err.message
-            });
+            res.status(500).json({ status: false, message: err.message });
         }
     });
-
 };
