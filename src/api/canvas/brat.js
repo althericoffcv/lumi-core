@@ -1,18 +1,28 @@
 const { createCanvas, GlobalFonts } = require('@napi-rs/canvas');
 const path = require('path');
+const fs = require('fs');
 
-GlobalFonts.registerFromPath(path.join(__dirname, '../../fonts/Arimo.ttf'), 'Arimo');
+const fontPath = path.join(__dirname, '../../fonts/Arimo.ttf');
+if (fs.existsSync(fontPath)) {
+    GlobalFonts.registerFromPath(fontPath, 'Arimo');
+} else {
+    console.error('[brat] font not found at:', fontPath);
+}
 
 module.exports = (app) => {
-    app.get('/canvas/brat', async (req, res) => {
+    app.get('/canvas/brat', (req, res) => {
         try {
             const raw = req.query.text || '';
 
             if (!raw.trim()) {
-                return res.status(400).json({
-                    status: false,
-                    message: 'Query parameter ?text= is required'
-                });
+                return res.status(400).json({ status: false, message: 'Query parameter ?text= is required' });
+            }
+
+            const families = GlobalFonts.families.map(f => f.family);
+            console.log('[brat] registered fonts:', families);
+
+            if (!families.includes('Arimo')) {
+                return res.status(500).json({ status: false, message: 'Font Arimo not loaded. families: ' + families.join(', ') });
             }
 
             const text  = raw.toLowerCase();
@@ -24,13 +34,10 @@ module.exports = (app) => {
 
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, SIZE, SIZE);
-
             ctx.textAlign    = 'center';
             ctx.textBaseline = 'middle';
 
-            const setFont = (size) => {
-                ctx.font = `${size}px Arimo`;
-            };
+            const setFont = (size) => { ctx.font = `${size}px Arimo`; };
 
             const wrapText = (txt, maxW, size) => {
                 setFont(size);
@@ -39,12 +46,8 @@ module.exports = (app) => {
                 let cur = '';
                 for (const w of words) {
                     const test = cur ? `${cur} ${w}` : w;
-                    if (ctx.measureText(test).width > maxW && cur) {
-                        lines.push(cur);
-                        cur = w;
-                    } else {
-                        cur = test;
-                    }
+                    if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+                    else cur = test;
                 }
                 if (cur) lines.push(cur);
                 return lines;
@@ -73,20 +76,14 @@ module.exports = (app) => {
             ctx.shadowOffsetY = 0;
 
             setFont(fontSize);
-            lines.forEach((line, i) => {
-                ctx.fillText(line, SIZE / 2, startY + i * lineH);
-            });
+            lines.forEach((line, i) => ctx.fillText(line, SIZE / 2, startY + i * lineH));
 
             const buffer = canvas.toBuffer('image/png');
-
-            res.writeHead(200, {
-                'Content-Type': 'image/png',
-                'Content-Length': buffer.length,
-                'Cache-Control': 'public, max-age=300'
-            });
+            res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': buffer.length });
             res.end(buffer, 'binary');
 
         } catch (err) {
+            console.error('[brat] error:', err);
             res.status(500).json({ status: false, message: err.message });
         }
     });
