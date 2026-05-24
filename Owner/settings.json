@@ -23,6 +23,11 @@
           "name": "TikTok",
           "desc": "Download video or slideshow from TikTok",
           "path": "/downloader/tiktok?url="
+        },
+        {
+          "name": "Instagram",
+          "desc": "Download video or slideshow from Instagram",
+          "path": "/downloader/instagram?url="
         }
       ]
     }
