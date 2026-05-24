@@ -68,6 +68,11 @@
           "name": "Wink Enhance Photo",
           "desc": "Enhance photo quality using Wink AI",
           "path": "/tools/wink?url="
+        },
+        {
+  "name": "Wink Enhance Video",
+  "desc": "Enhance video quality using Wink AI (Ultra HD)",
+  "path": "/tools/winkvid?url="
         }
       ]
     }
