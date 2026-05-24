@@ -316,27 +316,46 @@ footer strong{color:var(--accent);font-weight:400;}
 const BASE_URL = 'https://api.lumi-base.my.id';
 
 async function loadSettings() {
-  let cfg;
+  // Fallback config — always works even if settings.json gagal
+  var FALLBACK = {
+    name: 'Lumi Base', version: '1.0.0', author: 'Altheric Official',
+    description: 'Open REST API by Altheric Official — no authentication required.',
+    baseUrl: BASE_URL,
+    banner: BASE_URL + '/image/191851aefde677526f000487a23d4f8a.gif',
+    categories: [{
+      name: 'Search',
+      items: [{ name: 'Pinterest', desc: 'Search images on Pinterest', path: '/search/pinterest?q=' }]
+    }]
+  };
+
+  var cfg = FALLBACK;
+
   try {
-    const r = await fetch(BASE_URL + '/settings.json');
-    if (!r.ok) throw new Error('not ok');
-    cfg = await r.json();
-    // fix banner path to absolute
-    if (cfg.banner && cfg.banner.startsWith('/')) {
-      cfg.banner = BASE_URL + cfg.banner;
+    // Coba fetch settings dari server (pakai origin biar tetap work di subdomain apapun)
+    var urls = [
+      window.location.origin + '/settings.json',
+      BASE_URL + '/settings.json'
+    ];
+    var fetched = false;
+    for (var i = 0; i < urls.length; i++) {
+      try {
+        var r = await fetch(urls[i]);
+        if (r.ok) {
+          var data = await r.json();
+          if (data && data.name) {
+            cfg = data;
+            // Pastikan banner pakai URL absolut
+            if (cfg.banner && cfg.banner.startsWith('/')) {
+              cfg.banner = BASE_URL + cfg.banner;
+            }
+            fetched = true;
+            break;
+          }
+        }
+      } catch(e) { /* coba URL berikutnya */ }
     }
-  } catch {
-    cfg = {
-      name: 'Lumi Base', version: '1.0.0', author: 'Altheric Official',
-      description: 'Open REST API by Altheric Official — no authentication required.',
-      baseUrl: BASE_URL,
-      banner: BASE_URL + '/image/191851aefde677526f000487a23d4f8a.gif',
-      categories: [{
-        name: 'Search',
-        items: [{ name: 'Pinterest', desc: 'Search images on Pinterest', path: '/search/pinterest?q=' }]
-      }]
-    };
-  }
+  } catch(e) { /* pakai fallback */ }
+
   applySettings(cfg);
 }
 
