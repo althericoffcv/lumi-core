@@ -1,6 +1,5 @@
 const express = require('express');
 const chalk   = require('chalk');
-const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
 const app     = express();
@@ -42,10 +41,25 @@ app.get('/settings.json', (req, res) => {
 
 app.use(normalLimiter);
 
-// ── Load routes ──────────────────────────────────────────────────────────────
-try { require('./src/api/search/pinterest')(app); } catch(e) { console.error('[SKIP] pinterest:', e.message); }
-try { require('./src/api/download/tiktok')(app); } catch(e) { console.error('[SKIP] tiktok:', e.message); }
-try { require('./src/api/download/instagram')(app); } catch(e) { console.error('[SKIP] instagram:', e.message); }
+// ── Auto-load semua routes dari src/api/**/  ─────────────────────────────────
+function loadRoutes(dir) {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            loadRoutes(full);
+        } else if (entry.isFile() && entry.name.endsWith('.js')) {
+            try {
+                require(full)(app);
+                console.log(chalk.green(`  [OK] loaded: ${path.relative(__dirname, full)}`));
+            } catch (e) {
+                console.error(chalk.red(`  [SKIP] ${path.relative(__dirname, full)}: ${e.message}`));
+            }
+        }
+    }
+}
+
+loadRoutes(path.join(__dirname, 'src/api'));
 
 // Serve the API docs page
 app.get('/', (req, res) => {
