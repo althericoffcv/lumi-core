@@ -542,8 +542,7 @@ async function runGeneric(epId, pathBase, paramKeys) {
   const res = document.getElementById('gres-' + epId);
   const btn = document.getElementById('gbtn-' + epId);
 
-  // Use relative path so request hits same Vercel server (avoids CORS)
-  let url = pathBase;
+  let url = 'https://api.lumi-base.my.id' + pathBase;
   if (paramKeys.length) {
     const pairs = paramKeys.map(k => {
       const val = document.getElementById(`gf-${epId}-${k}`)?.value.trim() || '';
