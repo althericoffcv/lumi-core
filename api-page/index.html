@@ -858,11 +858,11 @@ function copyEndpoint(e, id, url) {
 }
 
 async function runGeneric(epId, pathBase, paramKeys) {
-  var res  = document.getElementById('gres-'  + epId);
-  var btn  = document.getElementById('gbtn-'  + epId);
-  var stat = document.getElementById('gstat-' + epId);
+
+  function el(id) { return document.getElementById(id); }
 
   function setStatus(cls, msg) {
+    var stat = el('gstat-' + epId);
     if (!stat) return;
     stat.style.display = 'flex';
     stat.className = 'run-status ' + cls;
@@ -872,9 +872,9 @@ async function runGeneric(epId, pathBase, paramKeys) {
       copyBtn.className = 'copy-result-btn';
       copyBtn.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2H3.5A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg>Copy';
       copyBtn.onclick = function() {
-        var resultEl = res;
-        if (!resultEl || !resultEl.textContent) return;
-        navigator.clipboard.writeText(resultEl.textContent).then(function() {
+        var r = el('gres-' + epId);
+        if (!r || !r.textContent) return;
+        navigator.clipboard.writeText(r.textContent).then(function() {
           copyBtn.textContent = '✓ Copied';
           copyBtn.classList.add('copied');
           setTimeout(function() {
@@ -887,17 +887,27 @@ async function runGeneric(epId, pathBase, paramKeys) {
     }
   }
 
+  function showResult(text, isErr) {
+    var res = el('gres-' + epId);
+    if (!res) return;
+    res.style.display = 'block';
+    res.className = 'generic-result show' + (isErr ? ' err' : '');
+    res.textContent = text;
+  }
+
   var url = 'https://api.lumi-base.my.id' + pathBase;
   if (paramKeys && paramKeys.length) {
     var pairs = [];
     for (var i = 0; i < paramKeys.length; i++) {
       var k = paramKeys[i];
-      var el = document.getElementById('gf-' + epId + '-' + k);
-      pairs.push(k + '=' + encodeURIComponent(el ? el.value.trim() : ''));
+      var inp = el('gf-' + epId + '-' + k);
+      pairs.push(k + '=' + encodeURIComponent(inp ? inp.value.trim() : ''));
     }
     url += '?' + pairs.join('&');
   }
 
+  var btn = el('gbtn-' + epId);
+  var res = el('gres-' + epId);
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ldots"><span></span><span></span><span></span></span>'; }
   setStatus('loading', 'Fetching...');
   if (res) { res.style.display = 'none'; res.textContent = ''; }
@@ -905,54 +915,26 @@ async function runGeneric(epId, pathBase, paramKeys) {
   try {
     var r = await fetch(url, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
     var raw = await r.text();
-    var display, isErr = false;
     try {
       var json = JSON.parse(raw);
-      display = JSON.stringify(json, null, 2);
-      if (!r.ok) isErr = true;
-      setStatus(r.ok ? 'ok' : 'fail', r.ok
-        ? '✓ ' + r.status + ' OK' + (json.total != null ? ' — ' + json.total + ' hasil' : '')
-        : '✖ HTTP ' + r.status + (json.message ? ' — ' + json.message : ''));
+      setStatus(r.ok ? 'ok' : 'fail',
+        r.ok ? '✓ ' + r.status + ' OK' + (json.total != null ? ' — ' + json.total + ' hasil' : '')
+              : '✖ HTTP ' + r.status + (json.message ? ' — ' + json.message : ''));
+      showResult(JSON.stringify(json, null, 2), !r.ok);
     } catch(e) {
-      display = raw.slice(0, 1000);
-      isErr = !r.ok;
       setStatus(r.ok ? 'ok' : 'fail', r.ok ? '✓ ' + r.status : '✖ HTTP ' + r.status);
-    }
-    if (res) {
-      res.style.display = 'block';
-      res.className = 'generic-result show' + (isErr ? ' err' : '');
-      res.textContent = display;
+      showResult(raw.slice(0, 1000), !r.ok);
     }
   } catch(err) {
     setStatus('fail', '✖ ' + err.message);
-    if (res) {
-      res.style.display = 'block';
-      res.className = 'generic-result show err';
-      res.textContent = err.message;
-    }
+    showResult(err.message, true);
   }
 
-  if (btn) { btn.disabled = false; btn.textContent = 'Run'; }
+  var btn2 = el('gbtn-' + epId);
+  if (btn2) { btn2.disabled = false; btn2.textContent = 'Run'; }
 }
 
-document.querySelectorAll('.tdot').forEach(dot => {
-  dot.addEventListener('click', () => {
-    const theme = dot.dataset.theme;
-    document.documentElement.dataset.theme = theme;
-    document.querySelectorAll('.tdot').forEach(d => d.classList.remove('active'));
-    dot.classList.add('active');
-    localStorage.setItem('lb-theme', theme);
-  });
-});
-(function(){
-  const saved = localStorage.getItem('lb-theme');
-  if (saved) {
-    document.documentElement.dataset.theme = saved;
-    document.querySelectorAll('.tdot').forEach(d =>
-      d.classList.toggle('active', d.dataset.theme === saved)
-    );
-  }
-})();
+
 
 document.getElementById('global-modal-backdrop').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
