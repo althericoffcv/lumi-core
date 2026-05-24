@@ -43,19 +43,8 @@ app.get('/settings.json', (req, res) => {
 app.use(normalLimiter);
 
 // ── Load routes ──────────────────────────────────────────────────────────────
-const routes = [
-    './src/api/search/pinterest',
-    './src/api/Download/tiktok',
-];
-
-routes.forEach(r => {
-    try {
-        require(r)(app);
-        console.log('[OK] ' + r);
-    } catch (e) {
-        console.error('[SKIP] ' + r + ' — ' + e.message);
-    }
-});
+try { require('./src/api/search/pinterest')(app); } catch(e) { console.error('[SKIP] pinterest:', e.message); }
+try { require('./src/api/download/tiktok')(app); } catch(e) { console.error('[SKIP] tiktok:', e.message); }
 
 // Serve the API docs page
 app.get('/', (req, res) => {
