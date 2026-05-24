@@ -697,6 +697,7 @@ function buildTester(epId, pathBase, params, name) {
   hd.textContent = 'Live Tester — ' + name;
   wrap.appendChild(hd);
 
+  var inputs = {};
   var fieldWrap = document.createElement('div');
   fieldWrap.className = params.length ? 'param-fields' : 'tester-row';
   params.forEach(function(p) {
@@ -707,9 +708,10 @@ function buildTester(epId, pathBase, params, name) {
     lbl.textContent = p.key;
     var inp = document.createElement('input');
     inp.className = 'param-field-input';
-    inp.id = 'gf-' + epId + '-' + p.key;
     inp.type = 'text';
     inp.placeholder = p.key + '...';
+    inp.autocomplete = 'off';
+    inputs[p.key] = inp;
     row.appendChild(lbl);
     row.appendChild(inp);
     fieldWrap.appendChild(row);
@@ -718,26 +720,25 @@ function buildTester(epId, pathBase, params, name) {
 
   var runRow = document.createElement('div');
   runRow.className = params.length ? 'param-run-row' : 'tester-row';
+
   var btn = document.createElement('button');
   btn.className = 't-btn';
-  btn.id = 'gbtn-' + epId;
   btn.textContent = 'Run';
-  var paramKeys = params.map(function(p) { return p.key; });
-  btn.addEventListener('click', function() {
-    runGeneric(epId, pathBase, paramKeys);
-  });
-  runRow.appendChild(btn);
-  wrap.appendChild(runRow);
 
   var stat = document.createElement('div');
   stat.className = 'run-status';
-  stat.id = 'gstat-' + epId;
   stat.style.display = 'none';
-  wrap.appendChild(stat);
 
   var res = document.createElement('div');
   res.className = 'generic-result';
-  res.id = 'gres-' + epId;
+
+  btn.addEventListener('click', function() {
+    runGenericDirect(pathBase, params, inputs, btn, stat, res);
+  });
+
+  runRow.appendChild(btn);
+  wrap.appendChild(runRow);
+  wrap.appendChild(stat);
   wrap.appendChild(res);
 
   return wrap;
@@ -855,6 +856,71 @@ function copyEndpoint(e, id, url) {
     btn.classList.add('copied');
     setTimeout(() => { btn.innerHTML = ICON_COPY; btn.classList.remove('copied'); }, 1800);
   });
+}
+
+async function runGenericDirect(pathBase, params, inputs, btn, stat, res) {
+  var COPY_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2H3.5A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg>Copy';
+
+  function setStatus(cls, msg) {
+    stat.style.display = 'flex';
+    stat.className = 'run-status ' + cls;
+    stat.textContent = msg;
+    if (cls === 'ok' || cls === 'fail') {
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'copy-result-btn';
+      copyBtn.innerHTML = COPY_ICON;
+      copyBtn.onclick = function() {
+        navigator.clipboard.writeText(res.textContent || '').then(function() {
+          copyBtn.textContent = '✓ Copied';
+          copyBtn.classList.add('copied');
+          setTimeout(function() { copyBtn.innerHTML = COPY_ICON; copyBtn.classList.remove('copied'); }, 1800);
+        });
+      };
+      stat.appendChild(copyBtn);
+    }
+  }
+
+  var url = 'https://api.lumi-base.my.id' + pathBase;
+  if (params && params.length) {
+    var pairs = params.map(function(p) {
+      var val = inputs[p.key] ? inputs[p.key].value.trim() : '';
+      return p.key + '=' + encodeURIComponent(val);
+    });
+    url += '?' + pairs.join('&');
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ldots"><span></span><span></span><span></span></span>';
+  setStatus('loading', 'Fetching...');
+  res.style.display = 'none';
+  res.textContent = '';
+
+  try {
+    var r = await fetch(url, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+    var raw = await r.text();
+    try {
+      var json = JSON.parse(raw);
+      setStatus(r.ok ? 'ok' : 'fail',
+        r.ok ? '✓ ' + r.status + ' OK' + (json.total != null ? ' — ' + json.total + ' hasil' : '')
+              : '✖ HTTP ' + r.status + (json.message ? ' — ' + json.message : ''));
+      res.style.display = 'block';
+      res.className = 'generic-result show' + (r.ok ? '' : ' err');
+      res.textContent = JSON.stringify(json, null, 2);
+    } catch(e) {
+      setStatus(r.ok ? 'ok' : 'fail', r.ok ? '✓ ' + r.status : '✖ HTTP ' + r.status);
+      res.style.display = 'block';
+      res.className = 'generic-result show' + (r.ok ? '' : ' err');
+      res.textContent = raw.slice(0, 1000);
+    }
+  } catch(err) {
+    setStatus('fail', '✖ ' + err.message);
+    res.style.display = 'block';
+    res.className = 'generic-result show err';
+    res.textContent = err.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Run';
 }
 
 async function runGeneric(epId, pathBase, paramKeys) {
