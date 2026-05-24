@@ -1009,6 +1009,26 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape' && _modalOpen) closeModal();
 });
 
+document.querySelectorAll('.tdot').forEach(function(dot) {
+  dot.addEventListener('click', function() {
+    var theme = dot.dataset.theme;
+    document.documentElement.dataset.theme = theme;
+    document.querySelectorAll('.tdot').forEach(function(d) { d.classList.remove('active'); });
+    dot.classList.add('active');
+    localStorage.setItem('lb-theme', theme);
+  });
+});
+
+(function() {
+  var saved = localStorage.getItem('lb-theme');
+  if (saved) {
+    document.documentElement.dataset.theme = saved;
+    document.querySelectorAll('.tdot').forEach(function(d) {
+      d.classList.toggle('active', d.dataset.theme === saved);
+    });
+  }
+})();
+
 loadSettings();
 
 (function() {
