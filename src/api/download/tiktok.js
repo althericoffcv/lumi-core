@@ -1,4 +1,3 @@
-
 module.exports = function(app) {
 
     function isTiktok(url) {
@@ -20,34 +19,23 @@ module.exports = function(app) {
         if (!match) throw new Error('Gagal mengambil data dari TikTok. URL mungkin tidak valid atau konten sudah dihapus.');
 
         let json;
-        try {
-            json = JSON.parse(match[1]);
-        } catch (e) {
-            throw new Error('Gagal parse data TikTok: ' + e.message);
-        }
+        try { json = JSON.parse(match[1]); }
+        catch (e) { throw new Error('Gagal parse data TikTok: ' + e.message); }
 
         const scope = json.__DEFAULT_SCOPE__;
-        if (!scope || !scope['webapp.reflow.video.detail']) {
-            throw new Error('Struktur data TikTok berubah atau konten tidak tersedia.');
-        }
+        if (!scope?.['webapp.reflow.video.detail']) throw new Error('Struktur data TikTok berubah atau konten tidak tersedia.');
 
         const data = scope['webapp.reflow.video.detail'].itemInfo.itemStruct;
-
-        let download;
         const isSlideshow = !!data.imagePost;
+        let download;
 
         if (isSlideshow) {
-            download = data.imagePost.images.reduce((acc, img) => {
-                return acc.concat(img.imageURL.urlList);
-            }, []);
+            download = data.imagePost.images.reduce((acc, img) => acc.concat(img.imageURL.urlList), []);
         } else {
             try {
-                const videoRes = await fetch(
-                    `https://www.tiktok.com/player/api/v1/items?item_ids=${data.id}`
-                ).then(r => r.json());
+                const videoRes = await fetch(`https://www.tiktok.com/player/api/v1/items?item_ids=${data.id}`).then(r => r.json());
                 download = videoRes.items[0].video_info.url_list[0];
-            } catch (e) {
-                // fallback ke download URL langsung dari data
+            } catch {
                 download = data.video?.downloadAddr || data.video?.playAddr || null;
             }
         }
@@ -85,12 +73,6 @@ module.exports = function(app) {
         };
     }
 
-    // ─── ENDPOINT ───────────────────────────────────────────────────────────────
-
-    /**
-     * ENDPOINT: GET /downloader/tiktok?url=https://www.tiktok.com/@user/video/xxx
-     * Desc: Download video atau slideshow dari TikTok
-     */
     app.get('/downloader/tiktok', async (req, res) => {
         const { url } = req.query;
 
@@ -101,29 +83,15 @@ module.exports = function(app) {
 
         if (!isTiktok(url)) return res.status(400).json({
             status: false,
-            message: 'URL bukan TikTok yang valid. Pastikan URL berasal dari tiktok.com'
+            message: 'URL bukan TikTok yang valid.'
         });
 
         try {
             const result = await tt(url);
-
-            if (!result) return res.status(404).json({
-                status: false,
-                message: 'Konten TikTok tidak ditemukan atau sudah dihapus.'
-            });
-
-            res.json({
-                status: true,
-                url,
-                data: result
-            });
-
+            if (!result) return res.status(404).json({ status: false, message: 'Konten TikTok tidak ditemukan atau sudah dihapus.' });
+            res.json({ status: true, url, data: result });
         } catch (err) {
-            res.status(500).json({
-                status: false,
-                message: err.message
-            });
+            res.status(500).json({ status: false, message: err.message });
         }
     });
-
 };
