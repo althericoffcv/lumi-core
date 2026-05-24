@@ -308,7 +308,9 @@ footer strong{color:var(--accent);font-weight:400;}
 </div>
 
 <footer>
-  <strong id="ft-name">Lumi Base</strong> REST API &mdash; by <strong id="ft-author">Altheric Official</strong>
+<footer>
+    <strong id="ft-name">Lumi Rest Api</strong>
+</footer>
 </footer>
 
 <script>
@@ -548,83 +550,65 @@ function copyEndpoint(e, id, url) {
 }
 
 async function runGeneric(epId, pathBase, paramKeys) {
-  const res  = document.getElementById('gres-'  + epId);
-  const btn  = document.getElementById('gbtn-'  + epId);
-  const stat = document.getElementById('gstat-' + epId);
+  var res  = document.getElementById('gres-'  + epId);
+  var btn  = document.getElementById('gbtn-'  + epId);
+  var stat = document.getElementById('gstat-' + epId);
 
-  function setStatus(type, msg) {
+  function setStatus(cls, msg) {
     if (!stat) return;
     stat.style.display = 'flex';
-    stat.className = 'run-status ' + type;
+    stat.className = 'run-status ' + cls;
     stat.textContent = msg;
   }
 
-  function showResult(text, isErr) {
-    if (!res) return;
-    res.style.display = 'block';
-    res.className = 'generic-result show' + (isErr ? ' err' : '');
-    res.textContent = text;
-  }
-
-  // Build URL
-  let url = 'https://api.lumi-base.my.id' + pathBase;
-  const qparts = [];
+  var url = 'https://api.lumi-base.my.id' + pathBase;
   if (paramKeys && paramKeys.length) {
-    paramKeys.forEach(function(k) {
+    var pairs = [];
+    for (var i = 0; i < paramKeys.length; i++) {
+      var k = paramKeys[i];
       var el = document.getElementById('gf-' + epId + '-' + k);
-      var val = el ? el.value.trim() : '';
-      qparts.push(k + '=' + encodeURIComponent(val));
-    });
-    if (qparts.length) url += '?' + qparts.join('&');
+      pairs.push(k + '=' + encodeURIComponent(el ? el.value.trim() : ''));
+    }
+    url += '?' + pairs.join('&');
   }
 
-  // Loading state
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ldots"><span></span><span></span><span></span></span>'; }
-  setStatus('loading', 'Mengirim ke ' + url + ' ...');
+  setStatus('loading', 'Fetching...');
   if (res) { res.style.display = 'none'; res.textContent = ''; }
 
-  var timedOut = false;
-  var controller = new AbortController();
-  var timer = setTimeout(function() { timedOut = true; controller.abort(); }, 15000);
-
   try {
-    var r = await fetch(url, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }
-    });
-    clearTimeout(timer);
+    var r = await fetch(url);
     var raw = await r.text();
-
-    if (r.ok) {
-      try {
-        var json = JSON.parse(raw);
-        var label = json.total !== undefined ? json.total + ' hasil' : 'Berhasil';
-        setStatus('ok', '✓ ' + r.status + ' OK — ' + label);
-        showResult(JSON.stringify(json, null, 2), false);
-      } catch(pe) {
-        setStatus('ok', '✓ ' + r.status + ' OK');
-        showResult(raw.slice(0, 2000), false);
-      }
-    } else {
-      var errMsg = 'HTTP ' + r.status;
-      try { errMsg += ' — ' + JSON.parse(raw).message; } catch(x) {}
-      setStatus('fail', '✖ ' + errMsg);
-      showResult(raw.slice(0, 800), true);
+    var display, isErr = false;
+    try {
+      var json = JSON.parse(raw);
+      display = JSON.stringify(json, null, 2);
+      if (!r.ok) isErr = true;
+      setStatus(r.ok ? 'ok' : 'fail', r.ok
+        ? '✓ ' + r.status + ' OK' + (json.total != null ? ' — ' + json.total + ' hasil' : '')
+        : '✖ HTTP ' + r.status + (json.message ? ' — ' + json.message : ''));
+    } catch(e) {
+      display = raw.slice(0, 1000);
+      isErr = !r.ok;
+      setStatus(r.ok ? 'ok' : 'fail', r.ok ? '✓ ' + r.status : '✖ HTTP ' + r.status);
     }
-  } catch (err) {
-    clearTimeout(timer);
-    var msg = timedOut ? 'Request timeout (15s)' : err.message;
-    setStatus('fail', '✖ ' + msg);
-    var hint = 'Error: ' + msg;
-    if (msg.indexOf('fetch') !== -1 || msg.indexOf('network') !== -1 || msg.indexOf('Failed') !== -1) {
-      hint += '\n\nKemungkinan penyebab:\n• api.lumi-base.my.id belum di-assign ke deployment ini di Vercel\n• Coba buka ' + url + ' langsung di browser dulu';
+    if (res) {
+      res.style.display = 'block';
+      res.className = 'generic-result show' + (isErr ? ' err' : '');
+      res.textContent = display;
     }
-    showResult(hint, true);
+  } catch(err) {
+    setStatus('fail', '✖ ' + err.message);
+    if (res) {
+      res.style.display = 'block';
+      res.className = 'generic-result show err';
+      res.textContent = err.message;
+    }
   }
 
   if (btn) { btn.disabled = false; btn.textContent = 'Run'; }
 }
+
 
 document.querySelectorAll('.tdot').forEach(dot => {
   dot.addEventListener('click', () => {
