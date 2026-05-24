@@ -41,13 +41,23 @@
         }
       ]
     },
-{
+    {
       "name": "Media",
       "items": [
         {
           "name": "YouTube Play",
-          "desc": " search to play a song or video from youtube",
+          "desc": "Search to play a song or video from YouTube",
           "path": "/media/ytplay?q="
+        }
+      ]
+    },
+    {
+      "name": "Canvas",
+      "items": [
+        {
+          "name": "Brat",
+          "desc": "Generate brat-style image with custom text",
+          "path": "/canvas/brat?text="
         }
       ]
     }
