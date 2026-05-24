@@ -542,8 +542,8 @@ async function runGeneric(epId, pathBase, paramKeys) {
   const res = document.getElementById('gres-' + epId);
   const btn = document.getElementById('gbtn-' + epId);
 
-  const apiBase = (typeof BASE_URL !== 'undefined' ? BASE_URL : '') ;
-  let url = apiBase + pathBase;
+  // Use relative path so request hits same Vercel server (avoids CORS)
+  let url = pathBase;
   if (paramKeys.length) {
     const pairs = paramKeys.map(k => {
       const val = document.getElementById(`gf-${epId}-${k}`)?.value.trim() || '';
@@ -558,13 +558,21 @@ async function runGeneric(epId, pathBase, paramKeys) {
   res.textContent = 'Fetching…';
 
   try {
-    const r    = await fetch(url);
-    const json = await r.json();
-    res.style.color = '';
-    res.textContent = JSON.stringify(json, null, 2);
+    const r = await fetch(url);
+    let body;
+    const ct = r.headers.get('content-type') || '';
+    if (ct.includes('application/json')) {
+      body = await r.json();
+      res.style.color = r.ok ? '' : 'var(--accent)';
+      res.textContent = JSON.stringify(body, null, 2);
+    } else {
+      body = await r.text();
+      res.className = 'generic-result show err';
+      res.textContent = `HTTP ${r.status}\n\n${body.slice(0, 500)}`;
+    }
   } catch (err) {
     res.className = 'generic-result show err';
-    res.textContent = '✖  ' + err.message;
+    res.textContent = '✖  ' + err.message + '\n\nPastikan API server aktif dan CORS diaktifkan.';
   }
 
   if (btn) { btn.disabled = false; btn.textContent = 'Run'; }
