@@ -74,10 +74,14 @@ module.exports = (app) => {
                 ctx.fillText(line, SIZE / 2, startY + i * lineH);
             });
 
-            const buffer = await canvas.encode('png');
-            res.setHeader('Content-Type', 'image/png');
-            res.setHeader('Cache-Control', 'public, max-age=300');
-            res.send(buffer);
+            const buffer = canvas.toBuffer('image/png');
+
+            res.writeHead(200, {
+                'Content-Type': 'image/png',
+                'Content-Length': buffer.length,
+                'Cache-Control': 'public, max-age=300'
+            });
+            res.end(buffer, 'binary');
 
         } catch (err) {
             res.status(500).json({ status: false, message: err.message });
