@@ -489,7 +489,6 @@ footer strong{color:var(--accent);font-weight:400;}
 const BASE_URL = 'https://api.lumi-base.my.id';
 
 async function loadSettings() {
-  // Fallback config — always works even if settings.json gagal
   var FALLBACK = {
     name: 'Lumi Base', version: '1.0.0', author: 'Altheric Official',
     description: 'Open REST API by Altheric Official — no authentication required.',
@@ -504,7 +503,6 @@ async function loadSettings() {
   var cfg = FALLBACK;
 
   try {
-    // Coba fetch settings dari server (pakai origin biar tetap work di subdomain apapun)
     var urls = [
       window.location.origin + '/settings.json',
       BASE_URL + '/settings.json'
@@ -517,7 +515,6 @@ async function loadSettings() {
           var data = await r.json();
           if (data && data.name) {
             cfg = data;
-            // Pastikan banner pakai URL absolut
             if (cfg.banner && cfg.banner.startsWith('/')) {
               cfg.banner = BASE_URL + cfg.banner;
             }
@@ -525,9 +522,9 @@ async function loadSettings() {
             break;
           }
         }
-      } catch(e) { /* coba URL berikutnya */ }
+      } catch(e) {  }
     }
-  } catch(e) { /* pakai fallback */ }
+  } catch(e) {  }
 
   applySettings(cfg);
 }
@@ -539,7 +536,6 @@ function applySettings(cfg) {
   document.getElementById('hd-version').textContent = `v${cfg.version || '1.0.0'}`;
   document.getElementById('hd-desc').textContent = cfg.description || '';
   document.getElementById('hd-baseurl').textContent = cfg.baseUrl || BASE_URL;
-  // footer is static
 
   const bannerEl = document.getElementById('hd-banner');
   if (cfg.banner) {
@@ -642,7 +638,6 @@ function buildPanel(root, epId, item, baseUrl, catName) {
     <div class="tab-pane" id="tab-${epId}-tester"></div>`;
 
   root.appendChild(panel);
-  // Inject tester via real DOM so paramKeys never get HTML-encoded
   var _tp = panel.querySelector('[id="tab-' + epId + '-tester"]');
   if (_tp) _tp.appendChild(buildTester(epId, pathBase, params, item.name));
 }
@@ -699,7 +694,6 @@ function buildTester(epId, pathBase, params, name) {
   btn.className = 't-btn';
   btn.id = 'gbtn-' + epId;
   btn.textContent = 'Run';
-  // Capture paramKeys sebagai array JS — TIDAK lewat HTML onclick string
   var paramKeys = params.map(function(p) { return p.key; });
   btn.addEventListener('click', function() {
     runGeneric(epId, pathBase, paramKeys);
@@ -776,7 +770,6 @@ async function runGeneric(epId, pathBase, paramKeys) {
     stat.style.display = 'flex';
     stat.className = 'run-status ' + cls;
     stat.textContent = msg;
-    // Add copy result button when done
     if (cls === 'ok' || cls === 'fail') {
       var copyBtn = document.createElement('button');
       copyBtn.className = 'copy-result-btn';
@@ -797,7 +790,6 @@ async function runGeneric(epId, pathBase, paramKeys) {
     }
   }
 
-  // Build URL
   var url = 'https://api.lumi-base.my.id' + pathBase;
   if (paramKeys && paramKeys.length) {
     var pairs = [];
@@ -809,7 +801,6 @@ async function runGeneric(epId, pathBase, paramKeys) {
     url += '?' + pairs.join('&');
   }
 
-  // Loading
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ldots"><span></span><span></span><span></span></span>'; }
   setStatus('loading', 'Fetching...');
   if (res) { res.style.display = 'none'; res.textContent = ''; }
@@ -847,7 +838,6 @@ async function runGeneric(epId, pathBase, paramKeys) {
   if (btn) { btn.disabled = false; btn.textContent = 'Run'; }
 }
 
-
 document.querySelectorAll('.tdot').forEach(dot => {
   dot.addEventListener('click', () => {
     const theme = dot.dataset.theme;
@@ -869,7 +859,6 @@ document.querySelectorAll('.tdot').forEach(dot => {
 
 loadSettings();
 
-// ── 3D Particle Engine ────────────────────────────────────────────────────────
 (function() {
   var canvas, ctx, particles, animId, active = false;
   var W, H, scrollY = 0, targetScroll = 0;
@@ -917,7 +906,6 @@ loadSettings();
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Connections
     for (var i = 0; i < particles.length; i++) {
       var pi = project(particles[i], zoom);
       for (var j = i + 1; j < particles.length; j++) {
@@ -932,7 +920,6 @@ loadSettings();
       }
     }
 
-    // Particles
     for (var i = 0; i < particles.length; i++) {
       var p = particles[i];
       p.x += p.vx; p.y += p.vy; p.z += p.vz;
@@ -941,14 +928,12 @@ loadSettings();
       if (pr.sx < -60 || pr.sx > W+60 || pr.sy < -60 || pr.sy > H+60) { resetP(p); continue; }
 
       var r = p.size * pr.sc * 0.5;
-      // Glow
       var grd = ctx.createRadialGradient(pr.sx, pr.sy, 0, pr.sx, pr.sy, r * 3.5);
       grd.addColorStop(0, 'hsla(' + p.hue + ',90%,72%,' + pr.a + ')');
       grd.addColorStop(0.4, 'hsla(' + p.hue + ',80%,60%,' + (pr.a * 0.35) + ')');
       grd.addColorStop(1, 'transparent');
       ctx.fillStyle = grd;
       ctx.beginPath(); ctx.arc(pr.sx, pr.sy, r * 3.5, 0, Math.PI * 2); ctx.fill();
-      // Core
       ctx.fillStyle = 'hsla(' + p.hue + ',100%,88%,' + Math.min(1, pr.a * 1.6) + ')';
       ctx.beginPath(); ctx.arc(pr.sx, pr.sy, Math.max(0.6, r * 0.45), 0, Math.PI * 2); ctx.fill();
     }
