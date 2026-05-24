@@ -1,11 +1,11 @@
 const yts = require('yt-search');
 
-module.exports = function (app) {
+module.exports = function(app) {
     app.get('/search/youtube', async (req, res) => {
         const { q } = req.query;
 
         if (!q) return res.status(400).json({
-            status:  false,
+            status: false,
             message: "Parameter 'q' wajib diisi! Contoh: /search/youtube?q=superman+theme",
         });
 
@@ -25,17 +25,9 @@ module.exports = function (app) {
                 },
             }));
 
-            res.json({
-                status: true,
-                query:  q,
-                total:  data.length,
-                data,
-            });
+            res.json({ status: true, query: q, total: data.length, data });
         } catch (err) {
-            res.status(500).json({
-                status:  false,
-                message: err.message,
-            });
+            res.status(500).json({ status: false, message: err.message });
         }
     });
 };
