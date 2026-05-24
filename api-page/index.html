@@ -466,11 +466,12 @@ function buildPanel(root, epId, item, baseUrl, catName) {
       </div>
     </div>
 
-    <div class="tab-pane" id="tab-${epId}-tester">
-      ${buildTester(epId, pathBase, params, item.name)}
-    </div>`;
+    <div class="tab-pane" id="tab-${epId}-tester"></div>`;
 
   root.appendChild(panel);
+  // Inject tester via real DOM so paramKeys never get HTML-encoded
+  var _tp = panel.querySelector('[id="tab-' + epId + '-tester"]');
+  if (_tp) _tp.appendChild(buildTester(epId, pathBase, params, item.name));
 }
 
 function buildParamsTable(params) {
@@ -492,36 +493,59 @@ function buildParamsTable(params) {
 }
 
 function buildTester(epId, pathBase, params, name) {
-  if (!params.length) {
-    return `
-      <div class="tester">
-        <div class="tester-hd">Live Tester — ${name}</div>
-        <div class="tester-row">
-          <button class="t-btn" id="gbtn-${epId}" onclick="runGeneric('${epId}','${pathBase}',[])">Run</button>
-        </div>
-        <div class="run-status" id="gstat-${epId}" style="display:none"></div>
-        <div class="generic-result" id="gres-${epId}"></div>
-      </div>`;
-  }
+  var wrap = document.createElement('div');
+  wrap.className = 'tester';
 
-  const fields = params.map(p => `
-    <div class="param-field-row">
-      <span class="param-field-label">${p.key}</span>
-      <input class="param-field-input" id="gf-${epId}-${p.key}" type="text" placeholder="${p.key}..." autocomplete="off"/>
-    </div>`).join('');
+  var hd = document.createElement('div');
+  hd.className = 'tester-hd';
+  hd.textContent = 'Live Tester — ' + name;
+  wrap.appendChild(hd);
 
-  const paramsJson = JSON.stringify(params.map(p => p.key));
+  var fieldWrap = document.createElement('div');
+  fieldWrap.className = params.length ? 'param-fields' : 'tester-row';
+  params.forEach(function(p) {
+    var row = document.createElement('div');
+    row.className = 'param-field-row';
+    var lbl = document.createElement('span');
+    lbl.className = 'param-field-label';
+    lbl.textContent = p.key;
+    var inp = document.createElement('input');
+    inp.className = 'param-field-input';
+    inp.id = 'gf-' + epId + '-' + p.key;
+    inp.type = 'text';
+    inp.placeholder = p.key + '...';
+    row.appendChild(lbl);
+    row.appendChild(inp);
+    fieldWrap.appendChild(row);
+  });
+  wrap.appendChild(fieldWrap);
 
-  return `
-    <div class="tester">
-      <div class="tester-hd">Live Tester — ${name}</div>
-      <div class="param-fields">${fields}</div>
-      <div class="param-run-row">
-        <button class="t-btn" id="gbtn-${epId}" onclick="runGeneric('${epId}','${pathBase}',${paramsJson})">Run</button>
-      </div>
-      <div class="run-status" id="gstat-${epId}" style="display:none"></div>
-      <div class="generic-result" id="gres-${epId}"></div>
-    </div>`;
+  var runRow = document.createElement('div');
+  runRow.className = params.length ? 'param-run-row' : 'tester-row';
+  var btn = document.createElement('button');
+  btn.className = 't-btn';
+  btn.id = 'gbtn-' + epId;
+  btn.textContent = 'Run';
+  // Capture paramKeys sebagai array JS — TIDAK lewat HTML onclick string
+  var paramKeys = params.map(function(p) { return p.key; });
+  btn.addEventListener('click', function() {
+    runGeneric(epId, pathBase, paramKeys);
+  });
+  runRow.appendChild(btn);
+  wrap.appendChild(runRow);
+
+  var stat = document.createElement('div');
+  stat.className = 'run-status';
+  stat.id = 'gstat-' + epId;
+  stat.style.display = 'none';
+  wrap.appendChild(stat);
+
+  var res = document.createElement('div');
+  res.className = 'generic-result';
+  res.id = 'gres-' + epId;
+  wrap.appendChild(res);
+
+  return wrap;
 }
 
 function toggleDetail(id) {
