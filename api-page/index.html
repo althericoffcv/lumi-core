@@ -746,46 +746,66 @@ function buildTester(epId, pathBase, params, name) {
 var _modalOpen = false;
 
 function openModal(id) {
-  var panel = document.getElementById('detail-' + id);
-  if (!panel) return;
+  var meta = window._modalMeta && window._modalMeta[id];
+  if (!meta) return;
 
   var backdrop = document.getElementById('global-modal-backdrop');
   var header   = document.getElementById('global-modal-header');
   var body     = document.getElementById('global-modal-body');
 
-  header.innerHTML = panel.querySelector('.panel-title').innerHTML +
+  var panel = document.getElementById('detail-' + id);
+  var titleEl = panel ? panel.querySelector('.panel-title') : null;
+  header.innerHTML = (titleEl ? titleEl.innerHTML : '') +
     '<button class="modal-close" onclick="closeModal()">✕</button>';
 
   body.innerHTML = '';
-  var tabsEl  = panel.querySelector('.panel-tabs');
-  var panesEl = document.createElement('div');
-  Array.from(panel.querySelectorAll('.tab-pane')).forEach(function(p) {
-    panesEl.appendChild(p.cloneNode(true));
+
+  var tabBar = document.createElement('div');
+  tabBar.className = 'panel-tabs';
+  var tabNames = ['Parameters', 'Request', 'Try It'];
+  var paneEls = [];
+
+  tabNames.forEach(function(name, i) {
+    var tab = document.createElement('div');
+    tab.className = 'ptab' + (i === 0 ? ' active' : '');
+    tab.textContent = name;
+    tabBar.appendChild(tab);
+
+    var pane = document.createElement('div');
+    pane.className = 'tab-pane' + (i === 0 ? ' active' : '');
+    paneEls.push(pane);
   });
 
-  if (tabsEl) body.appendChild(tabsEl.cloneNode(true));
-  body.appendChild(panesEl);
-
-  var tabs  = body.querySelectorAll('.ptab');
-  var panes = body.querySelectorAll('.tab-pane');
-  tabs.forEach(function(t) { t.classList.remove('active'); });
-  panes.forEach(function(p) { p.classList.remove('active'); });
-  if (tabs[0])  tabs[0].classList.add('active');
-  if (panes[0]) panes[0].classList.add('active');
-
-  tabs.forEach(function(t, i) {
-    t.onclick = function() {
-      tabs.forEach(function(x) { x.classList.remove('active'); });
-      panes.forEach(function(x) { x.classList.remove('active'); });
-      t.classList.add('active');
-      if (panes[i]) panes[i].classList.add('active');
-    };
+  tabBar.querySelectorAll('.ptab');
+  var allTabs = tabBar.querySelectorAll ? null : null;
+  tabBar.addEventListener('click', function(e) {
+    var clicked = e.target.closest('.ptab');
+    if (!clicked) return;
+    var tabs = Array.from(tabBar.querySelectorAll('.ptab'));
+    var idx = tabs.indexOf(clicked);
+    tabs.forEach(function(t) { t.classList.remove('active'); });
+    paneEls.forEach(function(p) { p.classList.remove('active'); });
+    clicked.classList.add('active');
+    if (paneEls[idx]) paneEls[idx].classList.add('active');
   });
 
-  var testerPane = body.querySelector('[id$="-tester"]');
-  if (testerPane && !testerPane.hasChildNodes()) {
-    testerPane.appendChild(buildTester(id, _modalMeta[id].pathBase, _modalMeta[id].params, _modalMeta[id].name));
+  body.appendChild(tabBar);
+  paneEls.forEach(function(p) { body.appendChild(p); });
+
+  var sourcePanel = document.getElementById('detail-' + id);
+
+  var paramsPane = paneEls[0];
+  var reqPane    = paneEls[1];
+  var tryPane    = paneEls[2];
+
+  if (sourcePanel) {
+    var srcParams = sourcePanel.querySelector('[id^="tab-"][id$="-params"]');
+    var srcReq    = sourcePanel.querySelector('[id^="tab-"][id$="-request"]');
+    if (srcParams) paramsPane.innerHTML = srcParams.innerHTML;
+    if (srcReq)    reqPane.innerHTML    = srcReq.innerHTML;
   }
+
+  tryPane.appendChild(buildTester(id, meta.pathBase, meta.params, meta.name));
 
   document.querySelectorAll('.ep-row').forEach(function(r) { r.classList.remove('active'); });
   var row = document.getElementById('eprow-' + id);
