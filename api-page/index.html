@@ -308,9 +308,7 @@ footer strong{color:var(--accent);font-weight:400;}
 </div>
 
 <footer>
-<footer>
-    <strong id="ft-name">Lumi Rest Api</strong>
-</footer>
+  Lumi Rest Api
 </footer>
 
 <script>
@@ -320,15 +318,19 @@ const BASE_URL = 'https://api.lumi-base.my.id';
 async function loadSettings() {
   let cfg;
   try {
-    const r = await fetch('/settings.json');
+    const r = await fetch(BASE_URL + '/settings.json');
     if (!r.ok) throw new Error('not ok');
     cfg = await r.json();
+    // fix banner path to absolute
+    if (cfg.banner && cfg.banner.startsWith('/')) {
+      cfg.banner = BASE_URL + cfg.banner;
+    }
   } catch {
     cfg = {
       name: 'Lumi Base', version: '1.0.0', author: 'Altheric Official',
       description: 'Open REST API by Altheric Official — no authentication required.',
       baseUrl: BASE_URL,
-      banner: '/image/191851aefde677526f000487a23d4f8a.gif',
+      banner: BASE_URL + '/image/191851aefde677526f000487a23d4f8a.gif',
       categories: [{
         name: 'Search',
         items: [{ name: 'Pinterest', desc: 'Search images on Pinterest', path: '/search/pinterest?q=' }]
@@ -345,8 +347,7 @@ function applySettings(cfg) {
   document.getElementById('hd-version').textContent = `v${cfg.version || '1.0.0'}`;
   document.getElementById('hd-desc').textContent = cfg.description || '';
   document.getElementById('hd-baseurl').textContent = cfg.baseUrl || BASE_URL;
-  document.getElementById('ft-name').textContent = cfg.name || 'Lumi Base';
-  document.getElementById('ft-author').textContent = cfg.author || 'Altheric Official';
+  // footer is static
 
   const bannerEl = document.getElementById('hd-banner');
   if (cfg.banner) {
@@ -561,6 +562,7 @@ async function runGeneric(epId, pathBase, paramKeys) {
     stat.textContent = msg;
   }
 
+  // Build URL
   var url = 'https://api.lumi-base.my.id' + pathBase;
   if (paramKeys && paramKeys.length) {
     var pairs = [];
@@ -572,6 +574,7 @@ async function runGeneric(epId, pathBase, paramKeys) {
     url += '?' + pairs.join('&');
   }
 
+  // Loading
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ldots"><span></span><span></span><span></span></span>'; }
   setStatus('loading', 'Fetching...');
   if (res) { res.style.display = 'none'; res.textContent = ''; }
