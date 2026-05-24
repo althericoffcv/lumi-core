@@ -4,7 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Lumi Base · API</title>
-  <link rel="preconnect" href="https://<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
 
 [data-theme="pink"] {
@@ -262,6 +263,7 @@ footer strong{color:var(--accent);font-weight:400;}
       <div class="pill">60 req / min</div>
       <div class="pill">Format: JSON</div>
       <div class="pill" id="hd-baseurl">https://api.lumi-base.my.id</div>
+    </div>
 
     <div class="banner-theme-row">
       <div class="gif-banner">
@@ -299,7 +301,7 @@ footer strong{color:var(--accent);font-weight:400;}
 </div>
 
 <footer>
-  REST API
+  <strong id="ft-name">Lumi Base</strong> REST API &mdash; by <strong id="ft-author">Altheric Official</strong>
 </footer>
 
 <script>
@@ -310,9 +312,9 @@ async function loadSettings() {
   let cfg;
   try {
     const r = await fetch('/settings.json');
+    if (!r.ok) throw new Error('not ok');
     cfg = await r.json();
   } catch {
-    
     cfg = {
       name: 'Lumi Base', version: '1.0.0', author: 'Altheric Official',
       description: 'Open REST API by Altheric Official — no authentication required.',
@@ -328,7 +330,6 @@ async function loadSettings() {
 }
 
 function applySettings(cfg) {
-  
   const [firstName, ...rest] = (cfg.name || 'Lumi Base').split(' ');
   document.getElementById('hd-logo').innerHTML =
     `${firstName} <em>${rest.join(' ') || 'Base'}</em>`;
@@ -337,9 +338,14 @@ function applySettings(cfg) {
   document.getElementById('hd-baseurl').textContent = cfg.baseUrl || BASE_URL;
   document.getElementById('ft-name').textContent = cfg.name || 'Lumi Base';
   document.getElementById('ft-author').textContent = cfg.author || 'Altheric Official';
-  document.getElementById('hd-banner').src = cfg.banner || '';
-  document.title = `${cfg.name || 'Lumi Base'} · API`;
 
+  const bannerEl = document.getElementById('hd-banner');
+  if (cfg.banner) {
+    bannerEl.src = cfg.banner;
+    bannerEl.onerror = () => { bannerEl.style.display = 'none'; };
+  }
+
+  document.title = `${cfg.name || 'Lumi Base'} · API`;
   buildFolders(cfg.categories || [], cfg.baseUrl || BASE_URL);
 }
 
@@ -353,9 +359,8 @@ function buildFolders(categories, baseUrl) {
     const catId = `cat${ci}`;
     const count = cat.items?.length || 0;
 
-    
     const folder = document.createElement('div');
-    folder.className = 'folder'; 
+    folder.className = 'folder';
     folder.id = `folder-${catId}`;
 
     const tab = document.createElement('div');
@@ -389,7 +394,6 @@ function buildFolders(categories, baseUrl) {
       };
       content.appendChild(row);
 
-      
       buildPanel(panelsRoot, epId, item, baseUrl, cat.name);
     });
 
@@ -399,7 +403,6 @@ function buildFolders(categories, baseUrl) {
 }
 
 function buildPanel(root, epId, item, baseUrl, catName) {
-  
   const pathBase = item.path.split('?')[0];
   const queryStr = item.path.includes('?') ? item.path.split('?')[1] : '';
   const params = queryStr
@@ -410,7 +413,6 @@ function buildPanel(root, epId, item, baseUrl, catName) {
   panel.className = 'detail-panel';
   panel.id = `detail-${epId}`;
 
-  
   const pathDisplay = pathBase +
     (params.length ? '?' + params.map(p => `<span class="pq">${p.key}=</span><span class="pq">{${p.key}}</span>`).join('&') : '');
 
@@ -450,7 +452,7 @@ function buildParamsTable(params) {
       <td class="pn">${p.key}</td>
       <td class="pt">string</td>
       <td><span class="req-tag">required</span></td>
-      <td style="font-family:\'DM Sans\',sans-serif;font-size:12px;color:var(--muted);">${p.key} value</td>
+      <td style="font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted);">${p.key} value</td>
     </tr>`).join('');
   return `
     <div class="table-scroll">
@@ -503,7 +505,6 @@ function toggleDetail(id) {
   if (!isOpen) {
     row.classList.add('active');
     panel.classList.add('show');
-    
     const tabs  = panel.querySelectorAll('.ptab');
     const panes = panel.querySelectorAll('.tab-pane');
     tabs.forEach(t => t.classList.remove('active'));
