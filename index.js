@@ -45,6 +45,7 @@ app.use(normalLimiter);
 // ── Load routes ──────────────────────────────────────────────────────────────
 try { require('./src/api/search/pinterest')(app); } catch(e) { console.error('[SKIP] pinterest:', e.message); }
 try { require('./src/api/download/tiktok')(app); } catch(e) { console.error('[SKIP] tiktok:', e.message); }
+try { require('./src/api/download/instagram')(app); } catch(e) { console.error('[SKIP] instagram:', e.message); }
 
 // Serve the API docs page
 app.get('/', (req, res) => {
