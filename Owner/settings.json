@@ -33,6 +33,11 @@
           "name": "Instagram",
           "desc": "Download video or slideshow from Instagram",
           "path": "/downloader/instagram?url="
+        },
+        {
+          "name": "YouTube",
+          "desc": "Download MP4 or MP3 from YouTube",
+          "path": "/downloader/youtube?url="
         }
       ]
     }
