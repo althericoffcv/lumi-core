@@ -7,17 +7,12 @@
   "banner": "/image/191851aefde677526f000487a23d4f8a.gif",
   "categories": [
     {
-      "name": "Search",
+      "name": "Canvas",
       "items": [
         {
-          "name": "Pinterest",
-          "desc": "Search images on Pinterest",
-          "path": "/search/pinterest?q="
-        },
-        {
-          "name": "YouTube",
-          "desc": "Search videos on YouTube",
-          "path": "/search/youtube?q="
+          "name": "Brat",
+          "desc": "Generate brat-style image with custom text",
+          "path": "/canvas/brat?text="
         }
       ]
     },
@@ -25,14 +20,14 @@
       "name": "Downloader",
       "items": [
         {
-          "name": "TikTok",
-          "desc": "Download video or slideshow from TikTok",
-          "path": "/downloader/tiktok?url="
-        },
-        {
           "name": "Instagram",
           "desc": "Download video or slideshow from Instagram",
           "path": "/downloader/instagram?url="
+        },
+        {
+          "name": "TikTok",
+          "desc": "Download video or slideshow from TikTok",
+          "path": "/downloader/tiktok?url="
         },
         {
           "name": "YouTube",
@@ -52,12 +47,27 @@
       ]
     },
     {
-      "name": "Canvas",
+      "name": "Search",
       "items": [
         {
-          "name": "Brat",
-          "desc": "Generate brat-style image with custom text",
-          "path": "/canvas/brat?text="
+          "name": "Pinterest",
+          "desc": "Search images on Pinterest",
+          "path": "/search/pinterest?q="
+        },
+        {
+          "name": "YouTube",
+          "desc": "Search videos on YouTube",
+          "path": "/search/youtube?q="
+        }
+      ]
+    },
+    {
+      "name": "Tools",
+      "items": [
+        {
+          "name": "Wink Enhance Photo",
+          "desc": "Enhance photo quality using Wink AI",
+          "path": "/tools/wink?url="
         }
       ]
     }
