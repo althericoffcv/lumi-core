@@ -40,6 +40,16 @@
           "path": "/downloader/youtube?url="
         }
       ]
+    },
+{
+      "name": "Media",
+      "items": [
+        {
+          "name": "YouTube Play",
+          "desc": " search to play a song or video from youtube",
+          "path": "/media/ytplay?q="
+        }
+      ]
     }
   ]
 }
