@@ -18,7 +18,6 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// CORS — izinkan semua origin
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -27,13 +26,10 @@ app.use((req, res, next) => {
     next();
 });
 
-// Serve GIF/images from root-level /image/ folder
 app.use('/image', express.static(path.join(__dirname, 'image')));
 
-// Serve static assets from api-page
 app.use('/', express.static(path.join(__dirname, 'api-page'), { index: false }));
 
-// Serve settings.json from Owner/
 app.get('/settings.json', (req, res) => {
     const p = path.join(__dirname, 'Owner', 'settings.json');
     if (!fs.existsSync(p)) return res.status(404).json({ error: 'settings.json not found' });
@@ -42,8 +38,8 @@ app.get('/settings.json', (req, res) => {
 
 app.use(normalLimiter);
 require('./src/api/search/pinterest')(app);
+require('./src/api/Download/tiktok')(app);
 
-// Serve the API docs page
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'api-page', 'index.html'));
 });
