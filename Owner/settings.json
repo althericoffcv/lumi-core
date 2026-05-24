@@ -13,6 +13,11 @@
           "name": "Pinterest",
           "desc": "Search images on Pinterest",
           "path": "/search/pinterest?q="
+        },
+        {
+          "name": "YouTube",
+          "desc": "Search videos on YouTube",
+          "path": "/search/youtube?q="
         }
       ]
     },
