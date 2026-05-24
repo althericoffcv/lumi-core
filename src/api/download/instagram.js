@@ -58,30 +58,6 @@ function extractMedia(html) {
     return results;
 }
 
-async function downloadInstagram(igUrl) {
-    const body = new URLSearchParams({ url: igUrl }).toString();
-    const res = await axios.post(TARGET_URL, body, {
-        headers: DEFAULT_HEADERS,
-        timeout: 60000,
-        maxRedirects: 5,
-        responseType: 'text',
-        validateStatus: () => true,
-    });
-
-    const html = String(res.data || '');
-    const results = extractMedia(html);
-
-    if (!results.length) throw new Error('Tidak ada media yang ditemukan. URL mungkin private atau tidak valid.');
-
-    return results;
-}
-
-// ─── ENDPOINT ───────────────────────────────────────────────────────────────
-
-/**
- * ENDPOINT: GET /downloader/instagram?url=https://www.instagram.com/reel/xxx
- * Desc: Download video atau foto dari Instagram (reel, post, stories)
- */
 module.exports = function(app) {
     app.get('/downloader/instagram', async (req, res) => {
         const { url } = req.query;
@@ -97,18 +73,21 @@ module.exports = function(app) {
         });
 
         try {
-            const results = await downloadInstagram(url);
-            res.json({
-                status: true,
-                url,
-                total: results.length,
-                data: results
+            const body = new URLSearchParams({ url }).toString();
+            const response = await axios.post(TARGET_URL, body, {
+                headers: DEFAULT_HEADERS,
+                timeout: 60000,
+                maxRedirects: 5,
+                responseType: 'text',
+                validateStatus: () => true,
             });
+
+            const results = extractMedia(String(response.data || ''));
+            if (!results.length) throw new Error('Tidak ada media yang ditemukan. URL mungkin private atau tidak valid.');
+
+            res.json({ status: true, url, total: results.length, data: results });
         } catch (err) {
-            res.status(500).json({
-                status: false,
-                message: err.message
-            });
+            res.status(500).json({ status: false, message: err.message });
         }
     });
 };
