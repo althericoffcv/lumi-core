@@ -896,21 +896,66 @@ async function runGenericDirect(pathBase, params, inputs, btn, stat, res) {
   res.textContent = '';
 
   try {
-    var r = await fetch(url, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
-    var raw = await r.text();
-    try {
-      var json = JSON.parse(raw);
-      setStatus(r.ok ? 'ok' : 'fail',
-        r.ok ? '✓ ' + r.status + ' OK' + (json.total != null ? ' — ' + json.total + ' hasil' : '')
-              : '✖ HTTP ' + r.status + (json.message ? ' — ' + json.message : ''));
+    var r = await fetch(url, { cache: 'no-store' });
+    var ct = r.headers.get('Content-Type') || '';
+
+    if (!r.ok) {
+      var errText = await r.text();
+      var errMsg = '';
+      try { errMsg = JSON.parse(errText).message || ''; } catch(e) {}
+      setStatus('fail', '✖ HTTP ' + r.status + (errMsg ? ' — ' + errMsg : ''));
       res.style.display = 'block';
-      res.className = 'generic-result show' + (r.ok ? '' : ' err');
-      res.textContent = JSON.stringify(json, null, 2);
-    } catch(e) {
-      setStatus(r.ok ? 'ok' : 'fail', r.ok ? '✓ ' + r.status : '✖ HTTP ' + r.status);
+      res.className = 'generic-result show err';
+      res.textContent = errText.slice(0, 1000);
+    } else if (ct.startsWith('image/')) {
+      var blob = await r.blob();
+      var blobUrl = URL.createObjectURL(blob);
+      setStatus('ok', '✓ ' + r.status + ' OK — ' + ct.split('/')[1].toUpperCase());
       res.style.display = 'block';
-      res.className = 'generic-result show' + (r.ok ? '' : ' err');
-      res.textContent = raw.slice(0, 1000);
+      res.className = 'generic-result show';
+      res.innerHTML = '';
+      var img = document.createElement('img');
+      img.src = blobUrl;
+      img.style.cssText = 'max-width:100%;max-height:400px;display:block;border-radius:4px;';
+      var dl = document.createElement('a');
+      dl.href = blobUrl;
+      dl.download = 'result.' + (ct.split('/')[1] || 'png');
+      dl.textContent = '⬇ Download';
+      dl.style.cssText = 'display:inline-block;margin-top:8px;font-size:11px;color:var(--accent);';
+      res.appendChild(img);
+      res.appendChild(dl);
+    } else if (ct.startsWith('video/')) {
+      var blob = await r.blob();
+      var blobUrl = URL.createObjectURL(blob);
+      setStatus('ok', '✓ ' + r.status + ' OK — VIDEO');
+      res.style.display = 'block';
+      res.className = 'generic-result show';
+      res.innerHTML = '';
+      var vid = document.createElement('video');
+      vid.src = blobUrl;
+      vid.controls = true;
+      vid.style.cssText = 'max-width:100%;max-height:400px;display:block;border-radius:4px;';
+      var dl = document.createElement('a');
+      dl.href = blobUrl;
+      dl.download = 'result.' + (ct.split('/')[1] || 'mp4');
+      dl.textContent = '⬇ Download';
+      dl.style.cssText = 'display:inline-block;margin-top:8px;font-size:11px;color:var(--accent);';
+      res.appendChild(vid);
+      res.appendChild(dl);
+    } else {
+      var raw = await r.text();
+      try {
+        var json = JSON.parse(raw);
+        setStatus('ok', '✓ ' + r.status + ' OK' + (json.total != null ? ' — ' + json.total + ' hasil' : ''));
+        res.style.display = 'block';
+        res.className = 'generic-result show';
+        res.textContent = JSON.stringify(json, null, 2);
+      } catch(e) {
+        setStatus('ok', '✓ ' + r.status);
+        res.style.display = 'block';
+        res.className = 'generic-result show';
+        res.textContent = raw.slice(0, 1000);
+      }
     }
   } catch(err) {
     setStatus('fail', '✖ ' + err.message);
