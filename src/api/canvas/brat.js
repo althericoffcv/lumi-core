@@ -7,24 +7,27 @@ GlobalFonts.registerFromPath(path.join(process.cwd(), 'font/NotoColorEmoji.ttf')
 const EMOJI_RE = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu;
 
 const charWidth = (line, fontSize) => {
-    let count = 0;
-    const chars = [...line];
-    for (const c of chars) {
+    let total = 0;
+    for (const c of [...line]) {
         EMOJI_RE.lastIndex = 0;
-        if (EMOJI_RE.test(c)) count += 1.1;
-        else count += 0.55;
+        total += EMOJI_RE.test(c) ? fontSize * 1.1 : fontSize * 0.55;
     }
-    return count * fontSize;
+    return total;
 };
 
 const wrapText = (txt, maxW, fontSize) => {
-    const words = txt.split(' ');
-    const lines = [];
+    const tokens = [...txt];
+    const lines  = [];
     let cur = '';
-    for (const w of words) {
-        const test = cur ? `${cur} ${w}` : w;
-        if (charWidth(test, fontSize) > maxW && cur) { lines.push(cur); cur = w; }
-        else cur = test;
+
+    for (const token of tokens) {
+        const test = cur + token;
+        if (charWidth(test, fontSize) > maxW && cur) {
+            lines.push(cur);
+            cur = token;
+        } else {
+            cur = test;
+        }
     }
     if (cur) lines.push(cur);
     return lines;
@@ -38,9 +41,9 @@ module.exports = (app) => {
                 return res.status(400).json({ status: false, message: 'Query parameter ?text= is required' });
             }
 
-            const text  = raw.toLowerCase();
-            const SIZE  = 600;
-            const MAX_W = SIZE * 0.82;
+            const text   = [...raw.toLowerCase()].slice(0, 100).join('');
+            const SIZE   = 600;
+            const MAX_W  = SIZE * 0.82;
 
             const canvas = createCanvas(SIZE, SIZE);
             const ctx    = canvas.getContext('2d');
