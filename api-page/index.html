@@ -223,9 +223,13 @@ header{padding:56px 0 40px;border-bottom:1px solid var(--border);margin-bottom:4
 .param-field-input::placeholder{color:var(--muted2);}
 .param-field-input:focus{border-color:var(--accent);}
 .param-run-row{display:flex;gap:8px;padding:0 16px 14px;align-items:center;}
-.generic-result{display:none;border-top:1px solid var(--border);padding:14px 16px;font-size:11px;line-height:1.7;max-height:260px;overflow-y:auto;color:var(--text);background:var(--surface);word-break:break-all;}
-.generic-result.show{display:block;}
+.generic-result{display:none;border-top:1px solid var(--border);padding:14px 16px;font-size:11px;line-height:1.7;max-height:260px;overflow-y:auto;color:var(--text);background:var(--surface);word-break:break-all;white-space:pre-wrap;font-family:'DM Mono',monospace;}
+.generic-result.show{display:block!important;}
 .generic-result.err{color:#d95a5a;}
+.run-status{display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:11px;border-top:1px solid var(--border);background:var(--surface2);}
+.run-status.ok{color:#3da85e;}
+.run-status.fail{color:#d95a5a;}
+.run-status.loading{color:var(--muted);}
 
 .errors{background:var(--surface);border:1px solid var(--border);margin-top:40px;transition:background .2s,border .2s;}
 .errors .schema{border:none;}
@@ -470,8 +474,9 @@ function buildTester(epId, pathBase, params, name) {
       <div class="tester">
         <div class="tester-hd">Live Tester — ${name}</div>
         <div class="tester-row">
-          <button class="t-btn" onclick="runGeneric('${epId}','${pathBase}',[])">Run</button>
+          <button class="t-btn" id="gbtn-${epId}" onclick="runGeneric('${epId}','${pathBase}',[])">Run</button>
         </div>
+        <div class="run-status" id="gstat-${epId}" style="display:none"></div>
         <div class="generic-result" id="gres-${epId}"></div>
       </div>`;
   }
@@ -491,6 +496,7 @@ function buildTester(epId, pathBase, params, name) {
       <div class="param-run-row">
         <button class="t-btn" id="gbtn-${epId}" onclick="runGeneric('${epId}','${pathBase}',${paramsJson})">Run</button>
       </div>
+      <div class="run-status" id="gstat-${epId}" style="display:none"></div>
       <div class="generic-result" id="gres-${epId}"></div>
     </div>`;
 }
@@ -541,43 +547,63 @@ function copyEndpoint(e, id, url) {
 }
 
 async function runGeneric(epId, pathBase, paramKeys) {
-  const res = document.getElementById('gres-' + epId);
-  const btn = document.getElementById('gbtn-' + epId);
-  if (!res) return;
+  const res  = document.getElementById('gres-'  + epId);
+  const btn  = document.getElementById('gbtn-'  + epId);
+  const stat = document.getElementById('gstat-' + epId);
 
+  function setStatus(type, msg) {
+    if (!stat) return;
+    stat.style.display = 'flex';
+    stat.className = 'run-status ' + type;
+    stat.textContent = msg;
+  }
+
+  function showResult(text, isErr) {
+    if (!res) return;
+    res.className = 'generic-result show' + (isErr ? ' err' : '');
+    res.textContent = text;
+  }
+
+  if (!res) { alert('UI error: result element not found'); return; }
+
+  // Build URL
   let url = 'https://api.lumi-base.my.id' + pathBase;
   if (paramKeys && paramKeys.length) {
     const pairs = paramKeys.map(k => {
       const el = document.getElementById('gf-' + epId + '-' + k);
-      const val = el ? el.value.trim() : '';
-      return k + '=' + encodeURIComponent(val);
+      return k + '=' + encodeURIComponent(el ? el.value.trim() : '');
     });
     url += '?' + pairs.join('&');
   }
 
+  // Loading state
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ldots"><span></span><span></span><span></span></span>'; }
-  res.className = 'generic-result show';
-  res.removeAttribute('style');
-  res.style.color = 'var(--muted)';
-  res.textContent = 'Fetching…';
+  setStatus('loading', '⏳ Mengirim request ke ' + url);
+  res.className = 'generic-result';
+  res.textContent = '';
 
   try {
     const r = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
-    const text = await r.text();
-    let display;
-    try {
-      const json = JSON.parse(text);
-      display = JSON.stringify(json, null, 2);
-      res.style.color = r.ok ? '' : '#c8880c';
-    } catch {
-      display = 'HTTP ' + r.status + '\n\n' + text.slice(0, 600);
-      res.style.color = '#d95a5a';
+    const raw = await r.text();
+
+    if (r.ok) {
+      try {
+        const json = JSON.parse(raw);
+        setStatus('ok', '✓ ' + r.status + ' OK — ' + (json.total !== undefined ? json.total + ' hasil' : 'Berhasil'));
+        showResult(JSON.stringify(json, null, 2), false);
+      } catch {
+        setStatus('ok', '✓ ' + r.status + ' OK (non-JSON)');
+        showResult(raw.slice(0, 1000), false);
+      }
+    } else {
+      let errMsg = 'HTTP ' + r.status;
+      try { errMsg += ' — ' + JSON.parse(raw).message; } catch {}
+      setStatus('fail', '✖ ' + errMsg);
+      showResult(raw.slice(0, 800), true);
     }
-    res.className = 'generic-result show';
-    res.textContent = display;
   } catch (err) {
-    res.className = 'generic-result show err';
-    res.textContent = '✖  ' + err.message;
+    setStatus('fail', '✖ Gagal: ' + err.message);
+    showResult('Tidak bisa terhubung ke server.\n\nPastikan:\n• Domain api.lumi-base.my.id aktif\n• CORS diizinkan\n• Server tidak down\n\nError: ' + err.message, true);
   }
 
   if (btn) { btn.disabled = false; btn.textContent = 'Run'; }
