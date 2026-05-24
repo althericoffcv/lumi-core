@@ -14,7 +14,6 @@ const CLIENT_LANGUAGE = 'en_US';
 const CLIENT_TIMEZONE = 'Asia/Jakarta';
 const TASK_TYPE = '12';
 const CONTENT_TYPE = '1';
-const EXT_VALUE = '2';
 const UA = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Mobile Safari/537.36';
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -41,23 +40,14 @@ function traceHeaders(transaction = 'GET%20%2F%5Blocale%5D%2Fimage-enhancer%2Fup
 
 function baseParams(gnum, extra = {}) {
     return new URLSearchParams({
-        client_id: CLIENT_ID,
-        version: VERSION,
-        country_code: COUNTRY_CODE,
-        gnum,
-        client_language: CLIENT_LANGUAGE,
-        client_channel_id: '',
-        client_timezone: CLIENT_TIMEZONE,
-        ...extra
+        client_id: CLIENT_ID, version: VERSION, country_code: COUNTRY_CODE,
+        gnum, client_language: CLIENT_LANGUAGE, client_channel_id: '',
+        client_timezone: CLIENT_TIMEZONE, ...extra
     });
 }
 
 async function downloadToBuffer(url) {
-    const res = await axios.get(url, {
-        responseType: 'arraybuffer',
-        timeout: 30000,
-        headers: { 'User-Agent': UA }
-    });
+    const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 30000, headers: { 'User-Agent': UA } });
     const ct = res.headers['content-type'] || '';
     let ext = '.jpg';
     if (ct.includes('png')) ext = '.png';
@@ -65,33 +55,18 @@ async function downloadToBuffer(url) {
     return { buffer: Buffer.from(res.data), ext, mime: ct.split(';')[0].trim() };
 }
 
-function extToMime(ext) {
-    if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
-    if (ext === '.png') return 'image/png';
-    if (ext === '.webp') return 'image/webp';
-    return 'application/octet-stream';
-}
-
 async function enhance(imageUrl) {
     const gnum = crypto.randomUUID();
     const jar = new CookieJar();
-
     await jar.setCookie(`_sm=${gnum}; Path=/; Domain=wink.ai`, BASE_URL);
     await jar.setCookie(`meitustat=${encodeURIComponent(JSON.stringify({ wgid: gnum }))}; Path=/; Domain=wink.ai`, BASE_URL);
 
     const api = wrapper(axios.create({
-        baseURL: BASE_URL,
-        jar,
-        withCredentials: true,
-        validateStatus: () => true,
+        baseURL: BASE_URL, jar, withCredentials: true, validateStatus: () => true,
         headers: {
-            accept: '*/*',
-            origin: BASE_URL,
-            referer: `${BASE_URL}/image-enhancer/upload`,
-            'user-agent': UA,
-            'sec-ch-ua': '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
-            'sec-ch-ua-mobile': '?1',
-            'sec-ch-ua-platform': '"Android"',
+            accept: '*/*', origin: BASE_URL, referer: `${BASE_URL}/image-enhancer/upload`,
+            'user-agent': UA, 'sec-ch-ua': '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
+            'sec-ch-ua-mobile': '?1', 'sec-ch-ua-platform': '"Android"',
             ab_info: JSON.stringify({ ab_codes: [], version: '1.4.4' })
         }
     }));
@@ -106,8 +81,7 @@ async function enhance(imageUrl) {
 
     const policyParams = new URLSearchParams({
         app: sign.app, count: String(sign.count), sig: sign.sig,
-        sigTime: sign.sig_time, sigVersion: sign.sig_version,
-        suffix: sign.suffix, type: sign.type
+        sigTime: sign.sig_time, sigVersion: sign.sig_version, suffix: sign.suffix, type: sign.type
     });
     const policyRes = await axios.get(`${STRATEGY_URL}/upload/policy?${policyParams.toString()}`, {
         headers: { accept: '*/*', origin: BASE_URL, referer: `${BASE_URL}/`, 'user-agent': UA },
@@ -195,15 +169,17 @@ module.exports = (app) => {
             message: "Parameter 'url' wajib diisi! Contoh: /tools/wink?url=https://example.com/image.jpg"
         });
 
-        try {
-            new URL(url);
-        } catch {
+        try { new URL(url); } catch {
             return res.status(400).json({ status: false, message: 'URL tidak valid.' });
         }
 
         try {
             const result = await enhance(url);
-            res.json({ status: true, url, result });
+            const img = await axios.get(result, { responseType: 'arraybuffer', timeout: 30000, headers: { 'User-Agent': UA } });
+            const ct = img.headers['content-type'] || 'image/jpeg';
+            res.setHeader('Content-Type', ct);
+            res.setHeader('Content-Disposition', 'inline');
+            res.end(Buffer.from(img.data), 'binary');
         } catch (err) {
             res.status(500).json({ status: false, message: err.message });
         }
