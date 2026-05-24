@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Lumi Base · API</title>
+  <link rel="icon" type="image/png" href="/image/file_000000009f5871fa857af76792bc410d.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
@@ -560,50 +561,66 @@ async function runGeneric(epId, pathBase, paramKeys) {
 
   function showResult(text, isErr) {
     if (!res) return;
+    res.style.display = 'block';
     res.className = 'generic-result show' + (isErr ? ' err' : '');
     res.textContent = text;
   }
 
-  if (!res) { alert('UI error: result element not found'); return; }
-
   // Build URL
   let url = 'https://api.lumi-base.my.id' + pathBase;
+  const qparts = [];
   if (paramKeys && paramKeys.length) {
-    const pairs = paramKeys.map(k => {
-      const el = document.getElementById('gf-' + epId + '-' + k);
-      return k + '=' + encodeURIComponent(el ? el.value.trim() : '');
+    paramKeys.forEach(function(k) {
+      var el = document.getElementById('gf-' + epId + '-' + k);
+      var val = el ? el.value.trim() : '';
+      qparts.push(k + '=' + encodeURIComponent(val));
     });
-    url += '?' + pairs.join('&');
+    if (qparts.length) url += '?' + qparts.join('&');
   }
 
   // Loading state
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ldots"><span></span><span></span><span></span></span>'; }
-  setStatus('loading', '⏳ Mengirim request ke ' + url);
-  res.className = 'generic-result';
-  res.textContent = '';
+  setStatus('loading', 'Mengirim ke ' + url + ' ...');
+  if (res) { res.style.display = 'none'; res.textContent = ''; }
+
+  var timedOut = false;
+  var controller = new AbortController();
+  var timer = setTimeout(function() { timedOut = true; controller.abort(); }, 15000);
 
   try {
-    const r = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
-    const raw = await r.text();
+    var r = await fetch(url, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }
+    });
+    clearTimeout(timer);
+    var raw = await r.text();
 
     if (r.ok) {
       try {
-        const json = JSON.parse(raw);
-        setStatus('ok', '✓ ' + r.status + ' OK — ' + (json.total !== undefined ? json.total + ' hasil' : 'Berhasil'));
+        var json = JSON.parse(raw);
+        var label = json.total !== undefined ? json.total + ' hasil' : 'Berhasil';
+        setStatus('ok', '✓ ' + r.status + ' OK — ' + label);
         showResult(JSON.stringify(json, null, 2), false);
-      } catch {
-        setStatus('ok', '✓ ' + r.status + ' OK (non-JSON)');
-        showResult(raw.slice(0, 1000), false);
+      } catch(pe) {
+        setStatus('ok', '✓ ' + r.status + ' OK');
+        showResult(raw.slice(0, 2000), false);
       }
     } else {
-      let errMsg = 'HTTP ' + r.status;
-      try { errMsg += ' — ' + JSON.parse(raw).message; } catch {}
+      var errMsg = 'HTTP ' + r.status;
+      try { errMsg += ' — ' + JSON.parse(raw).message; } catch(x) {}
       setStatus('fail', '✖ ' + errMsg);
       showResult(raw.slice(0, 800), true);
     }
   } catch (err) {
-    setStatus('fail', '✖ Gagal: ' + err.message);
-    showResult('Tidak bisa terhubung ke server.\n\nPastikan:\n• Domain api.lumi-base.my.id aktif\n• CORS diizinkan\n• Server tidak down\n\nError: ' + err.message, true);
+    clearTimeout(timer);
+    var msg = timedOut ? 'Request timeout (15s)' : err.message;
+    setStatus('fail', '✖ ' + msg);
+    var hint = 'Error: ' + msg;
+    if (msg.indexOf('fetch') !== -1 || msg.indexOf('network') !== -1 || msg.indexOf('Failed') !== -1) {
+      hint += '\n\nKemungkinan penyebab:\n• api.lumi-base.my.id belum di-assign ke deployment ini di Vercel\n• Coba buka ' + url + ' langsung di browser dulu';
+    }
+    showResult(hint, true);
   }
 
   if (btn) { btn.disabled = false; btn.textContent = 'Run'; }
