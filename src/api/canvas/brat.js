@@ -26,7 +26,7 @@ module.exports = (app) => {
             ctx.textBaseline = 'middle';
 
             const setFont = (size) => {
-                ctx.font = `${size}px Arial, sans-serif`;
+                ctx.font = `${size}px "DejaVu Sans"`;
             };
 
             const wrapText = (txt, maxW, size) => {
