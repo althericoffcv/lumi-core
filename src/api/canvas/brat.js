@@ -2,6 +2,7 @@ const { createCanvas, GlobalFonts } = require('@napi-rs/canvas');
 const path = require('path');
 
 GlobalFonts.registerFromPath(path.join(process.cwd(), 'font/Arimo.ttf'), 'Arimo');
+GlobalFonts.registerFromPath(path.join(process.cwd(), 'font/NotoColorEmoji.ttf'), 'NotoColorEmoji');
 
 module.exports = (app) => {
     app.get('/canvas/brat', (req, res) => {
@@ -24,7 +25,7 @@ module.exports = (app) => {
             ctx.textAlign    = 'center';
             ctx.textBaseline = 'middle';
 
-            const setFont = (size) => { ctx.font = `${size}px Arimo`; };
+            const setFont = (size) => { ctx.font = `${size}px Arimo, NotoColorEmoji`; };
 
             const wrapText = (txt, maxW, size) => {
                 setFont(size);
