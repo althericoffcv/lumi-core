@@ -11,7 +11,7 @@ process.on('unhandledRejection', (err) => console.error(err?.message || err));
 
 const PORT = parseInt(process.env.PORT) || 3000;
 
-app.enable('trust proxy');
+app.set('trust proxy', 1);
 app.set('json spaces', 2);
 app.disable('x-powered-by');
 
