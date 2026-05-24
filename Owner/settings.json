@@ -15,6 +15,16 @@
           "path": "/search/pinterest?q="
         }
       ]
+    },
+    {
+      "name": "Downloader",
+      "items": [
+        {
+          "name": "TikTok",
+          "desc": "Download video or slideshow from TikTok",
+          "path": "/downloader/tiktok?url="
+        }
+      ]
     }
   ]
 }
