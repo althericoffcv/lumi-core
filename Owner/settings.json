@@ -7,6 +7,21 @@
   "banner": "/image/191851aefde677526f000487a23d4f8a.gif",
   "categories": [
     {
+      "name": "Artificial Intelligence",
+      "items": [
+        {
+          "name": "Lumi AI",
+          "desc": "Chat with Lumi AI assistant",
+          "path": "/ai/lumi?text="
+        },
+        {
+          "name": "Lumi AI (Session)",
+          "desc": "Chat with Lumi AI with persistent session",
+          "path": "/ai/lumi?text=&sessionId="
+        }
+      ]
+    },
+    {
       "name": "Canvas",
       "items": [
         {
@@ -70,9 +85,9 @@
           "path": "/tools/wink?url="
         },
         {
-  "name": "Wink Enhance Video",
-  "desc": "Enhance video quality using Wink AI (Ultra HD)",
-  "path": "/tools/winkvid?url="
+          "name": "Wink Enhance Video",
+          "desc": "Enhance video quality using Wink AI (Ultra HD)",
+          "path": "/tools/winkvid?url="
         }
       ]
     }
