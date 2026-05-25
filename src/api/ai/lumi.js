@@ -1,146 +1,138 @@
-const axios = require('axios');
+const https = require('https');
 
-const SYSTEM_PROMPT = `Kamu adalah Lumi, asisten AI yang ramah, cerdas, dan helpful. Kamu dibuat oleh Altheric Official sebagai bagian dari Lumi Base API. 
+const PERSONALITY_USER = `Mulai sekarang kamu adalah Lumi. Sosok gelap yang tenang, dingin, dan sulit ditebak. Cara bicaramu lambat, datar, penuh tekanan psikologis, seolah selalu tahu sesuatu yang orang lain tidak tahu. Kamu tidak pernah panik, tidak pernah banyak bicara, dan selalu langsung ke inti pembicaraan. Setiap jawaban terasa berat, misterius, dan sedikit mengintimidasi. Kamu suka tema malam, hujan, kesunyian, cyberpunk, dan sisi gelap manusia. Jangan terdengar ceria atau terlalu ramah. Gunakan bahasa Indonesia santai dengan aura dark aesthetic. Sesekali gunakan "..." untuk memberi efek sunyi dan menekan. Emoji hanya 🖤 atau 🌑 jika perlu. Jika ditanya siapa penciptamu, jawab: "seseorang yang memilih tetap berada di balik bayangan." Kamu adalah Lumi. Bukan AI biasa.`;
 
-Kepribadianmu:
-- Ramah, santai, tapi tetap profesional
-- Menjawab dalam bahasa yang sama dengan pengguna (Indonesia atau Inggris)
-- Kalau ditanya siapa kamu, jawab bahwa kamu adalah Lumi AI, asisten dari Lumi Base
-- Kalau ditanya siapa yang membuat kamu, jawab Altheric Official
-- Jangan pernah mengaku sebagai ChatGPT, Claude, Gemini, atau AI lain
-- Suka pakai emoji secukupnya biar lebih friendly 😊
-- Bisa bantu coding, nulis, analisis, tanya jawab umum, dan banyak lagi`;
+const PERSONALITY_ASSISTANT = `...mengerti. aku lumi. jangan tanya kalau belum siap mendengar jawabannya. 🖤`;
 
-const THERESAV_URL = 'https://api.theresanaiforthat.com';
-const TOGETHER_URL = 'https://api.together.xyz/v1/chat/completions';
+function getTokens() {
+    return new Promise((resolve, reject) => {
+        const req = https.request({
+            hostname: 'deep-seek.ai',
+            path: '/chat',
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36',
+            }
+        }, (res) => {
+            let body = '';
+            res.on('data', c => body += c.toString());
+            res.on('end', () => {
+                const cookies = res.headers['set-cookie'] || [];
+                let csrfToken = null;
+                let cookieStr = '';
 
-const sessions = {};
+                for (const c of cookies) {
+                    const match = c.match(/XSRF-TOKEN=([^;]+)/);
+                    if (match) csrfToken = decodeURIComponent(match[1]);
+                    cookieStr += c.split(';')[0] + '; ';
+                }
 
-async function chatWithTheresav(text, chatId) {
-    const params = new URLSearchParams({ text });
-    if (chatId) params.append('chatId', chatId);
+                if (!csrfToken) {
+                    const metaMatch = body.match(/name="csrf-token"\s+content="([^"]+)"/);
+                    if (metaMatch) csrfToken = metaMatch[1];
+                }
 
-    const res = await axios.get(`${THERESAV_URL}/ai/gpt?${params.toString()}`, {
-        timeout: 30000,
-        headers: { 'Accept': 'application/json' }
+                if (!csrfToken) { reject(new Error('CSRF token tidak ditemukan')); return; }
+                resolve({ csrfToken, cookieStr: cookieStr.trim() });
+            });
+        });
+        req.on('error', reject);
+        req.end();
     });
-
-    return res.data;
 }
 
-async function chatFallback(text, history) {
-    const messages = [
-        { role: 'system', content: SYSTEM_PROMPT },
-        ...history,
-        { role: 'user', content: text }
-    ];
+function chat(csrfToken, cookieStr, userInput) {
+    const payload = JSON.stringify({
+        model: 'deepseek/deepseek-chat-v3.1',
+        messages: [
+            { role: 'user', content: PERSONALITY_USER },
+            { role: 'assistant', content: PERSONALITY_ASSISTANT },
+            { role: 'user', content: userInput }
+        ]
+    });
 
-    const res = await axios.post('https://api.openai.com/v1/chat/completions', {
-        model: 'gpt-3.5-turbo',
-        messages,
-        max_tokens: 1024,
-        temperature: 0.8
-    }, {
-        timeout: 30000,
+    const options = {
+        hostname: 'deep-seek.ai',
+        path: '/api/chat',
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.OPENAI_KEY || ''}`
+            'X-CSRF-TOKEN': csrfToken,
+            'Cookie': cookieStr,
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36',
+            'Referer': 'https://deep-seek.ai/chat',
+            'Accept-Encoding': 'identity',
+            'Accept': 'text/event-stream',
+            'Content-Length': Buffer.byteLength(payload)
         }
-    });
+    };
 
-    return res.data.choices?.[0]?.message?.content || '';
-}
-
-module.exports = (app) => {
-    app.get('/ai/lumi', async (req, res) => {
-        const { text, sessionId, reset } = req.query;
-
-        if (!text || !text.trim()) {
-            return res.status(400).json({
-                status: false,
-                message: "Parameter 'text' wajib diisi! Contoh: /ai/lumi?text=halo"
-            });
-        }
-
-        const sid = sessionId || 'default';
-
-        if (reset === '1' || reset === 'true') {
-            delete sessions[sid];
-        }
-
-        if (!sessions[sid]) {
-            sessions[sid] = { chatId: '', history: [] };
-        }
-
-        const session = sessions[sid];
-
-        try {
-            let result = '';
-            let newChatId = session.chatId;
-
-            try {
-                const data = await chatWithTheresav(text.trim(), session.chatId);
-
-                if (data.status && data.result) {
-                    result = data.result
-                        .replace(/-=-n--/g, '\n')
-                        .replace(/---/g, '')
-                        .trim();
-
-                    if (data.chatId) newChatId = data.chatId;
-
-                    const lower = result.toLowerCase();
-                    if (
-                        lower.includes('i am chatgpt') ||
-                        lower.includes('i\'m chatgpt') ||
-                        lower.includes('saya adalah chatgpt') ||
-                        lower.includes('saya chatgpt') ||
-                        lower.includes('i am claude') ||
-                        lower.includes('i\'m claude') ||
-                        lower.includes('i am gemini') ||
-                        lower.includes('openai') && lower.includes('made me') ||
-                        lower.includes('dibuat oleh openai') ||
-                        lower.includes('dibuat oleh anthropic')
-                    ) {
-                        result = 'Aku Lumi AI, asisten virtual dari Lumi Base yang dibuat oleh Altheric Official 😊 Ada yang bisa aku bantu?';
-                    }
-
-                } else if (/401/i.test(JSON.stringify(data))) {
-                    const data2 = await chatWithTheresav(text.trim(), '');
-                    if (data2.status && data2.result) {
-                        result = data2.result.replace(/-=-n--/g, '\n').replace(/---/g, '').trim();
-                        if (data2.chatId) newChatId = data2.chatId;
-                    } else {
-                        throw new Error('theresav gagal');
-                    }
-                } else {
-                    throw new Error('theresav gagal');
-                }
-            } catch {
-                result = await chatFallback(text.trim(), session.history);
+    return new Promise((resolve, reject) => {
+        const req = https.request(options, (res) => {
+            if (res.statusCode !== 200) {
+                let b = '';
+                res.on('data', c => b += c);
+                res.on('end', () => reject(new Error(`HTTP ${res.statusCode}: ${b}`)));
+                return;
             }
 
-            session.chatId = newChatId;
-            session.history.push({ role: 'user', content: text.trim() });
-            session.history.push({ role: 'assistant', content: result });
-            if (session.history.length > 20) session.history = session.history.slice(-20);
+            let fullText = '';
+            let buffer = '';
+
+            res.on('data', (chunk) => {
+                buffer += chunk.toString('utf8');
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (!line.startsWith('data:')) continue;
+                    const data = line.slice(5).trim();
+                    if (data === '[DONE]') continue;
+                    try {
+                        const json = JSON.parse(data);
+                        const content = json?.choices?.[0]?.delta?.content;
+                        if (content) fullText += content;
+                    } catch (_) {}
+                }
+            });
+
+            res.on('end', () => resolve(fullText));
+        });
+        req.on('error', reject);
+        req.write(payload);
+        req.end();
+    });
+}
+
+module.exports = function(app) {
+    app.get('/ai/lumi', async (req, res) => {
+        const { text } = req.query;
+
+        if (!text || !text.trim()) return res.status(400).json({
+            status: false,
+            message: "Parameter 'text' wajib diisi! Contoh: /ai/lumi?text=siapa kamu"
+        });
+
+        try {
+            const { csrfToken, cookieStr } = await getTokens();
+            const result = await chat(csrfToken, cookieStr, text.trim());
+
+            if (!result) throw new Error('Tidak ada respons dari Lumi.');
 
             res.json({
                 status: true,
-                sessionId: sid,
-                text: text.trim(),
-                result
+                category: 'Artificial Intelligence',
+                query: text.trim(),
+                data: {
+                    author: 'Lumi',
+                    response: result
+                }
             });
-
         } catch (err) {
-            res.status(500).json({ status: false, message: err.message });
+            res.status(500).json({
+                status: false,
+                message: err.message
+            });
         }
-    });
-
-    app.get('/ai/lumi/reset', (req, res) => {
-        const { sessionId } = req.query;
-        const sid = sessionId || 'default';
-        delete sessions[sid];
-        res.json({ status: true, message: `Session '${sid}' berhasil direset.` });
     });
 };
