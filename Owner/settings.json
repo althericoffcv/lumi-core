@@ -18,7 +18,7 @@
           "name": "Venice Ai",
           "desc": "Chat with Venice Ai assistant",
           "path": "/ai/venice?text="
-        },
+        }
       ]
     },
     {
