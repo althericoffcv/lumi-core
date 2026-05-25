@@ -10,15 +10,15 @@
       "name": "Artificial Intelligence",
       "items": [
         {
-          "name": "Chat Gpt",
-          "desc": "Chat with Open Ai assistant",
-          "path": "/ai/chatgpt?text="
-        },
-        {
           "name": "Lumi AI",
           "desc": "Chat with Lumi AI assistant",
           "path": "/ai/lumi?text="
-        }
+        },
+        {
+          "name": "Venice Ai",
+          "desc": "Chat with Venice Ai assistant",
+          "path": "/ai/venice?text="
+        },
       ]
     },
     {
