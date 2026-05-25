@@ -1,5 +1,4 @@
 const crypto = require("crypto");
-const { fetch } = require("undici");
 
 class ChatGpt {
     constructor(c = {}) {
@@ -7,7 +6,7 @@ class ChatGpt {
         this.baseUrl = "https://chatgpt.com";
         this.user_agent = c.user_agent || "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36";
         this.msgid = c.msg_id || crypto.randomUUID();
-        this.oai_did = c.did || "06aed942-07f3-4c91-aa8c-3ec6299e612d" || crypto.randomUUID();
+        this.oai_did = c.did || crypto.randomUUID();
         this.screen_width = c.width || 1920;
         this.screen_height = c.height || 1080;
         this.lang = c.lang || "en-US";
@@ -53,7 +52,27 @@ class ChatGpt {
     }
 
     createBrowserConfig() {
-        return [this.screen_width + this.screen_height, "" + new Date(), 2172649472, Math.random(), this.user_agent, null, this.build_number, this.lang, `${this.lang},en`, Math.random(), "contacts−[object ContactsManager]", "_reactListening6506zq7cxya", "Nazir", performance.now(), this.msgid, "", 8, performance.timeOrigin, 0, 0, 0, 0, 0, 0, 0];
+        return [
+            this.screen_width + this.screen_height,
+            "" + new Date(),
+            2172649472,
+            Math.random(),
+            this.user_agent,
+            null,
+            this.build_number,
+            this.lang,
+            `${this.lang},en`,
+            Math.random(),
+            "contacts−[object ContactsManager]",
+            "_reactListening6506zq7cxya",
+            "Nazir",
+            performance.now(),
+            this.msgid,
+            "",
+            8,
+            performance.timeOrigin,
+            0, 0, 0, 0, 0, 0, 0
+        ];
     }
 
     runCheck(s, seed, d, config, a) {
@@ -83,6 +102,7 @@ class ChatGpt {
     async generateTkn() {
         const pData = this.getRequirementsTokenBlocking();
         const config = this.createBrowserConfig();
+
         const prepareRes = await fetch(`${this.baseUrl}/backend-anon/sentinel/chat-requirements/prepare`, {
             method: "POST",
             headers: this.web_headers(),
@@ -90,12 +110,10 @@ class ChatGpt {
         }).then(r => r.json());
 
         let powToken = null;
-        let turnstileToken = null;
-
         if (prepareRes.proofofwork?.required)
             powToken = this.getPow(prepareRes.proofofwork.seed, prepareRes.proofofwork.difficulty, config);
 
-        turnstileToken = crypto
+        const turnstileToken = crypto
             .randomBytes(Math.floor((2256 / 4) * 3))
             .toString("base64")
             .slice(0, 2256);
@@ -133,14 +151,18 @@ class ChatGpt {
             client_contextual_info: { app_name: "chatgpt.com" }
         };
 
-        let o = {
+        const o = {
             ...b,
             messages: [{
                 id,
                 author: { role: "user" },
                 create_time: Date.now() / 1e3,
                 content: { content_type: "text", parts: [t] },
-                metadata: { selected_github_repos: [], selected_all_github_repos: false, serialization_metadata: { custom_symbol_offsets: [] } }
+                metadata: {
+                    selected_github_repos: [],
+                    selected_all_github_repos: false,
+                    serialization_metadata: { custom_symbol_offsets: [] }
+                }
             }],
             enable_message_followups: true,
             client_contextual_info: {
@@ -169,12 +191,12 @@ class ChatGpt {
 
     async init(msg, web, id) {
         if (!msg) return "no msg";
-        const preparec = await fetch("https://chatgpt.com/backend-anon/f/conversation/prepare", {
+        const r = await fetch("https://chatgpt.com/backend-anon/f/conversation/prepare", {
+            method: "POST",
             headers: this.web_headers({ "X-Conduit-Token": "no-token" }),
-            body: JSON.stringify(this.initConversation(msg, true, web, id)),
-            method: "POST"
+            body: JSON.stringify(this.initConversation(msg, true, web, id))
         });
-        const tkn = await preparec.json();
+        const tkn = await r.json();
         return tkn.token;
     }
 
@@ -190,7 +212,6 @@ class ChatGpt {
             body: JSON.stringify(this.initConversation(msg, false, web, id)),
             headers: this.web_headers({
                 "OAI-Language": "en-US",
-                "Content-Type": "application/json",
                 "OpenAI-Sentinel-Chat-Requirements-Token": req.prepare_token,
                 "OpenAI-Sentinel-Turnstile-Token": req.turnstile,
                 "OpenAI-Sentinel-Proof-Token": req.pow,
@@ -199,35 +220,31 @@ class ChatGpt {
             })
         });
 
-        const decoder = new TextDecoder();
-        let buffer = "";
+        // native fetch: baca body sebagai text lalu parse SSE manual
+        const rawText = await res.text();
+        const lines = rawText.split("\n");
+
         let finalText = "";
         let subtitle = null;
         let model = null;
 
-        for await (const chunk of res.body) {
-            buffer += decoder.decode(chunk, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop();
-
-            for (const line of lines) {
-                if (!line.startsWith("data:")) continue;
-                const data = line.slice(5).trim();
-                if (data === "[DONE]") return { subtitle, model, msg: finalText };
-
+        for (const line of lines) {
+            if (!line.startsWith("data:")) continue;
+            const data = line.slice(5).trim();
+            if (data === "[DONE]") break;
+            try {
                 const json = JSON.parse(data);
                 if (json.type === "title_generation") subtitle = json.title;
                 if (json.type === "server_ste_metadata") model = json.metadata?.model_slug;
 
                 if (json.o === "patch" || Array.isArray(json.v)) {
-                    const patches = json.v || [];
-                    for (const p of patches) {
+                    for (const p of (json.v || [])) {
                         if (p.o === "append" && p.p?.includes("/message/content/parts/0")) {
                             finalText += p.v;
                         }
                     }
                 }
-            }
+            } catch (_) {}
         }
 
         return { subtitle, model, msg: finalText };
@@ -247,7 +264,7 @@ module.exports = function(app) {
             const gpt = new ChatGpt();
             const result = await gpt.startConversation(text.trim());
 
-            if (!result || !result.msg) throw new Error('Tidak ada respons dari ChatGPT.');
+            if (!result?.msg) throw new Error('Tidak ada respons dari ChatGPT.');
 
             res.json({
                 status: true,
