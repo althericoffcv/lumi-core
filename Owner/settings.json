@@ -13,11 +13,6 @@
           "name": "Lumi AI",
           "desc": "Chat with Lumi AI assistant",
           "path": "/ai/lumi?text="
-        },
-        {
-          "name": "Lumi AI (Session)",
-          "desc": "Chat with Lumi AI with persistent session",
-          "path": "/ai/lumi?text=&sessionId="
         }
       ]
     },
