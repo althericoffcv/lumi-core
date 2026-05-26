@@ -7,29 +7,10 @@
     }
   ],
   "routes": [
-    {
-      "src": "/image/(.*)",
-      "dest": "/index.js"
-    },
-    {
-      "src": "/imgurl/(.*)",
-      "dest": "/index.js"
-    },
-    {
-      "src": "/cloud/(.*)",
-      "dest": "/index.js"
-    },
-    {
-      "src": "/settings.json",
-      "dest": "/index.js"
-    },
-    {
-      "src": "/search/(.*)",
-      "dest": "/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.js"
-    }
+    { "src": "/image/(.*)", "dest": "/index.js" },
+    { "src": "/imgurl/(.*)", "dest": "/index.js" },
+    { "src": "/settings.json", "dest": "/index.js" },
+    { "src": "/search/(.*)", "dest": "/index.js" },
+    { "src": "/(.*)", "dest": "/index.js" }
   ]
 }
