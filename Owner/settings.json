@@ -37,17 +37,6 @@
       ]
     },
     {
-      "name": "Cloud",
-      "items": [
-        {
-          "name": "Lumi Uploader",
-          "desc": "Upload foto, video, gif, atau file ke cloud dan dapatkan URL langsung. Support base64, URL rehost, dan multiple upload sekaligus.",
-          "path": "/cloud/lumiuploader",
-          "method": "POST"
-        }
-      ]
-    },
-    {
       "name": "Downloader",
       "items": [
         {
