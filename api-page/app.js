@@ -220,40 +220,64 @@ function buildTester(epId, pathBase, params, name, method) {
     var fieldWrap = document.createElement('div');
     fieldWrap.className = 'tester-row';
     fieldWrap.style.flexDirection = 'column';
-    fieldWrap.style.gap = '6px';
+    fieldWrap.style.gap = '10px';
 
-    var lbl = document.createElement('span');
-    lbl.className = 'param-field-label';
-    lbl.textContent = 'JSON Body';
-    lbl.style.marginBottom = '4px';
+    var fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*,video/*,.gif';
+    fileInput.multiple = true;
+    fileInput.style.display = 'none';
 
-    var ta = document.createElement('textarea');
-    ta.className = 'param-field-input';
-    ta.rows = 6;
-    ta.style.width = '100%';
-    ta.style.resize = 'vertical';
-    ta.style.fontFamily = 'monospace';
-    ta.style.fontSize = '12px';
-    ta.placeholder = '{ "url": "https://example.com/photo.jpg" }';
-    inputs['__body__'] = ta;
+    var pickBtn = document.createElement('button');
+    pickBtn.className = 't-btn';
+    pickBtn.style.background = 'var(--surface2)';
+    pickBtn.style.color = 'var(--text)';
+    pickBtn.style.border = '1px dashed var(--border)';
+    pickBtn.style.width = '100%';
+    pickBtn.style.textAlign = 'center';
+    pickBtn.style.padding = '12px';
+    pickBtn.style.borderRadius = '6px';
+    pickBtn.style.cursor = 'pointer';
+    pickBtn.textContent = 'Pilih foto / video dari galeri';
+    pickBtn.addEventListener('click', function() { fileInput.click(); });
 
-    fieldWrap.appendChild(lbl);
-    fieldWrap.appendChild(ta);
+    var preview = document.createElement('div');
+    preview.style.cssText = 'display:none;gap:6px;flex-wrap:wrap;';
+
+    fileInput.addEventListener('change', function() {
+      var files = Array.from(fileInput.files);
+      if (!files.length) return;
+      preview.style.display = 'flex';
+      preview.innerHTML = '';
+      files.forEach(function(f) {
+        var tag = document.createElement('span');
+        tag.style.cssText = 'font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px;color:var(--text);';
+        tag.textContent = f.name;
+        preview.appendChild(tag);
+      });
+      pickBtn.textContent = files.length + ' file dipilih';
+    });
+
+    fieldWrap.appendChild(fileInput);
+    fieldWrap.appendChild(pickBtn);
+    fieldWrap.appendChild(preview);
     wrap.appendChild(fieldWrap);
 
     var runRow = document.createElement('div');
     runRow.className = 'tester-row';
     var btn = document.createElement('button');
     btn.className = 't-btn';
-    btn.textContent = 'Run';
+    btn.textContent = 'Upload';
     var stat = document.createElement('div');
     stat.className = 'run-status';
     stat.style.display = 'none';
     var res = document.createElement('div');
     res.className = 'generic-result';
+
     btn.addEventListener('click', function() {
-      runPostDirect(pathBase, ta, btn, stat, res);
+      runPostFile(pathBase, fileInput, btn, stat, res);
     });
+
     runRow.appendChild(btn);
     wrap.appendChild(runRow);
     wrap.appendChild(stat);
@@ -419,6 +443,93 @@ function copyEndpoint(e, id, url) {
     btn.classList.add('copied');
     setTimeout(() => { btn.innerHTML = ICON_COPY; btn.classList.remove('copied'); }, 1800);
   });
+}
+
+async function runPostFile(pathBase, fileInput, btn, stat, res) {
+  var COPY_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2H3.5A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg>Copy';
+
+  function setStatus(cls, msg) {
+    stat.style.display = 'flex';
+    stat.className = 'run-status ' + cls;
+    stat.textContent = msg;
+    if (cls === 'ok' || cls === 'fail') {
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'copy-result-btn';
+      copyBtn.innerHTML = COPY_ICON;
+      copyBtn.onclick = function() {
+        navigator.clipboard.writeText(res.textContent || '').then(function() {
+          copyBtn.textContent = '✓ Copied';
+          copyBtn.classList.add('copied');
+          setTimeout(function() { copyBtn.innerHTML = COPY_ICON; copyBtn.classList.remove('copied'); }, 1800);
+        });
+      };
+      stat.appendChild(copyBtn);
+    }
+  }
+
+  var files = Array.from(fileInput.files);
+  if (!files.length) { setStatus('fail', '✖ Pilih file dulu'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ldots"><span></span><span></span><span></span></span>';
+  setStatus('loading', 'Mengupload...');
+  res.style.display = 'none';
+  res.textContent = '';
+
+  function toBase64(file) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function(e) { resolve(e.target.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  try {
+    var body;
+    if (files.length === 1) {
+      var b64 = await toBase64(files[0]);
+      body = { base64: b64, filename: files[0].name };
+    } else {
+      var fileArr = [];
+      for (var i = 0; i < files.length; i++) {
+        var b64 = await toBase64(files[i]);
+        fileArr.push({ base64: b64, filename: files[i].name });
+      }
+      body = { files: fileArr };
+    }
+
+    var url = 'https://api.lumi-base.my.id' + pathBase;
+    var r = await fetch(url, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    var raw = await r.text();
+    try {
+      var json = JSON.parse(raw);
+      setStatus(r.ok ? 'ok' : 'fail',
+        r.ok ? '✓ ' + r.status + ' OK' + (json.total != null ? ' — ' + json.total + ' file terupload' : '')
+              : '✖ HTTP ' + r.status + (json.message ? ' — ' + json.message : ''));
+      res.style.display = 'block';
+      res.className = 'generic-result show' + (r.ok ? '' : ' err');
+      res.textContent = JSON.stringify(json, null, 2);
+    } catch(e) {
+      setStatus(r.ok ? 'ok' : 'fail', r.ok ? '✓ ' + r.status : '✖ HTTP ' + r.status);
+      res.style.display = 'block';
+      res.className = 'generic-result show' + (r.ok ? '' : ' err');
+      res.textContent = raw.slice(0, 1000);
+    }
+  } catch(err) {
+    setStatus('fail', '✖ ' + err.message);
+    res.style.display = 'block';
+    res.className = 'generic-result show err';
+    res.textContent = err.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Upload';
 }
 
 async function runPostDirect(pathBase, ta, btn, stat, res) {
