@@ -23,7 +23,7 @@
           "name": "Venice Ai Image Gen",
           "desc": "AI generator untuk membuat gambar keren dari teks prompt. Cocok untuk membuat art, anime, realistic image, wallpaper, logo, dan berbagai desain otomatis dengan teknologi AI.",
           "path": "/ai/veniceimggen?prompt="
-       }
+        }
       ]
     },
     {
@@ -33,6 +33,17 @@
           "name": "Brat",
           "desc": "Generate brat-style image with custom text",
           "path": "/canvas/brat?text="
+        }
+      ]
+    },
+    {
+      "name": "Cloud",
+      "items": [
+        {
+          "name": "Lumi Uploader",
+          "desc": "Upload foto, video, gif, atau file ke cloud dan dapatkan URL langsung. Support base64, URL rehost, dan multiple upload sekaligus.",
+          "path": "/cloud/lumiuploader",
+          "method": "POST"
         }
       ]
     },
