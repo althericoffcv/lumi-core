@@ -1,100 +1,110 @@
 {
-  "name": "Lumi Base",
-  "version": "1.0.0",
-  "description": "Open REST API by Altheric Official — no authentication required.",
-  "author": "Altheric Official",
-  "baseUrl": "https://api.lumi-base.my.id",
-  "banner": "/image/191851aefde677526f000487a23d4f8a.gif",
-  "categories": [
-    {
-      "name": "Artificial Intelligence",
-      "items": [
-        {
-          "name": "Lumi AI",
-          "desc": "Chat with Lumi AI assistant",
-          "path": "/ai/lumi?text="
-        },
-        {
-          "name": "Venice Ai",
-          "desc": "Chat with Venice Ai assistant",
-          "path": "/ai/venice?text="
-        },
-        {
-          "name": "Venice Ai Image Gen",
-          "desc": "AI generator untuk membuat gambar keren dari teks prompt. Cocok untuk membuat art, anime, realistic image, wallpaper, logo, dan berbagai desain otomatis dengan teknologi AI.",
-          "path": "/ai/veniceimggen?prompt="
-        }
-      ]
-    },
-    {
-      "name": "Canvas",
-      "items": [
-        {
-          "name": "Brat",
-          "desc": "Generate brat-style image with custom text",
-          "path": "/canvas/brat?text="
-        }
-      ]
-    },
-    {
-      "name": "Downloader",
-      "items": [
-        {
-          "name": "Instagram",
-          "desc": "Download video or slideshow from Instagram",
-          "path": "/downloader/instagram?url="
-        },
-        {
-          "name": "TikTok",
-          "desc": "Download video or slideshow from TikTok",
-          "path": "/downloader/tiktok?url="
-        },
-        {
-          "name": "YouTube",
-          "desc": "Download MP4 or MP3 from YouTube",
-          "path": "/downloader/youtube?url="
-        }
-      ]
-    },
-    {
-      "name": "Media",
-      "items": [
-        {
-          "name": "YouTube Play",
-          "desc": "Search to play a song or video from YouTube",
-          "path": "/media/ytplay?q="
-        }
-      ]
-    },
-    {
-      "name": "Search",
-      "items": [
-        {
-          "name": "Pinterest",
-          "desc": "Search images on Pinterest",
-          "path": "/search/pinterest?q="
-        },
-        {
-          "name": "YouTube",
-          "desc": "Search videos on YouTube",
-          "path": "/search/youtube?q="
-        }
-      ]
-    },
-    {
-      "name": "Tools",
-      "items": [
-        {
-          "name": "Wink Enhance Photo",
-          "desc": "Enhance photo quality using Wink AI",
-          "path": "/tools/wink?url="
-        },
-        {
-          "name": "Wink Enhance Video",
-          "desc": "Enhance video quality using Wink AI (Ultra HD)",
-          "path": "/tools/winkvid?url="
-        }
-      ]
-    }
-  ]
+"name": "Lumi Base",
+"version": "1.0.0",
+"description": "Open REST API by Altheric Official — no authentication required.",
+"author": "Altheric Official",
+"baseUrl": "https://api.lumi-base.my.id",
+"banner": "/image/191851aefde677526f000487a23d4f8a.gif",
+"categories": [
+{
+"name": "Artificial Intelligence",
+"items": [
+{
+"name": "Lumi AI",
+"desc": "Chat with Lumi AI assistant",
+"path": "/ai/lumi?text="
+},
+{
+"name": "Venice Ai",
+"desc": "Chat with Venice Ai assistant",
+"path": "/ai/venice?text="
+},
+{
+"name": "Venice Ai Image Gen",
+"desc": "AI generator untuk membuat gambar keren dari teks prompt. Cocok untuk membuat art, anime, realistic image, wallpaper, logo, dan berbagai desain otomatis dengan teknologi AI.",
+"path": "/ai/veniceimggen?prompt="
+}
+]
+},
+{
+"name": "Canvas",
+"items": [
+{
+"name": "Brat",
+"desc": "Generate brat-style image with custom text",
+"path": "/canvas/brat?text="
+}
+]
+},
+{
+"name": "Cloud",
+"items": [
+{
+"name": "Lumi Uploader",
+"desc": "Upload file via multipart form-data atau JSON (url/base64) ke cloud storage",
+"path": "/cloud/lumiuploader"
+}
+]
+},
+{
+"name": "Downloader",
+"items": [
+{
+"name": "Instagram",
+"desc": "Download video or slideshow from Instagram",
+"path": "/downloader/instagram?url="
+},
+{
+"name": "TikTok",
+"desc": "Download video or slideshow from TikTok",
+"path": "/downloader/tiktok?url="
+},
+{
+"name": "YouTube",
+"desc": "Download MP4 or MP3 from YouTube",
+"path": "/downloader/youtube?url="
+}
+]
+},
+{
+"name": "Media",
+"items": [
+{
+"name": "YouTube Play",
+"desc": "Search to play a song or video from YouTube",
+"path": "/media/ytplay?q="
+}
+]
+},
+{
+"name": "Search",
+"items": [
+{
+"name": "Pinterest",
+"desc": "Search images on Pinterest",
+"path": "/search/pinterest?q="
+},
+{
+"name": "YouTube",
+"desc": "Search videos on YouTube",
+"path": "/search/youtube?q="
+}
+]
+},
+{
+"name": "Tools",
+"items": [
+{
+"name": "Wink Enhance Photo",
+"desc": "Enhance photo quality using Wink AI",
+"path": "/tools/wink?url="
+},
+{
+"name": "Wink Enhance Video",
+"desc": "Enhance video quality using Wink AI (Ultra HD)",
+"path": "/tools/winkvid?url="
+}
+]
+}
+]
 }
