@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { heavyLimiter } = require('../../lib/rateLimiter');
+const { heavyLimiter } = require('../lib/rateLimiter');
 
 const GH_OWNER  = 'althericoffcv';
 const GH_REPO   = 'bf-uploader-db';
