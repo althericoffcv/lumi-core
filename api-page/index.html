@@ -454,6 +454,42 @@ header{padding:56px 0 40px;border-bottom:1px solid var(--border);margin-bottom:4
 .copy-result-btn:hover,.copy-result-btn.copied{background:var(--accent3);color:var(--accent);border-color:var(--accent2);}
 .copy-result-btn svg{width:11px;height:11px;}
 
+/* ── media preview ── */
+.media-preview{border-top:1px solid var(--border);padding:14px 16px;background:var(--surface);display:none;}
+.media-preview.show{display:block;}
+.media-preview img{max-width:100%;max-height:360px;display:block;border-radius:2px;border:1px solid var(--border);}
+.media-preview video,.media-preview audio{max-width:100%;display:block;border-radius:2px;}
+.media-preview-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+/* ── uploader tester ── */
+.uploader-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin:0;}
+.uploader-tab{padding:9px 16px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;}
+.uploader-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.uploader-pane{display:none;padding:14px 16px;}
+.uploader-pane.active{display:block;}
+.uploader-drop{border:2px dashed var(--border2);border-radius:4px;padding:28px 16px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--surface2);}
+.uploader-drop:hover,.uploader-drop.drag{border-color:var(--accent);background:var(--accent3);}
+.uploader-drop input{display:none;}
+.uploader-drop-icon{font-size:28px;margin-bottom:8px;}
+.uploader-drop-txt{font-size:12px;color:var(--muted);font-family:'DM Sans',sans-serif;}
+.uploader-drop-sub{font-size:10px;color:var(--muted2);margin-top:4px;}
+.uploader-file-list{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+.uploader-file-item{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:7px 10px;font-size:11px;}
+.uploader-file-item-thumb{width:32px;height:32px;object-fit:cover;border-radius:2px;border:1px solid var(--border);}
+.uploader-file-item-name{flex:1;font-family:'DM Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--text);}
+.uploader-file-item-size{font-size:9px;color:var(--muted2);flex-shrink:0;}
+.uploader-file-item-remove{cursor:pointer;color:var(--muted2);flex-shrink:0;font-size:13px;line-height:1;padding:2px 4px;border-radius:2px;transition:color .15s;}
+.uploader-file-item-remove:hover{color:#d95a5a;}
+.uploader-api-rows{display:flex;flex-direction:column;gap:8px;}
+.uploader-api-mode-select{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.uploader-api-mode-btn{padding:5px 12px;font-size:10px;letter-spacing:.08em;background:var(--surface2);border:1px solid var(--border);border-radius:2px;cursor:pointer;color:var(--muted);transition:all .15s;font-family:'DM Mono',monospace;}
+.uploader-api-mode-btn.active{background:var(--accent3);border-color:var(--accent2);color:var(--accent);}
+.uploader-api-field-lbl{font-size:10px;color:var(--muted);margin-bottom:4px;letter-spacing:.05em;}
+.uploader-textarea{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;padding:8px 10px;outline:none;border-radius:2px;font-family:'DM Mono',monospace;resize:vertical;transition:border-color .15s;min-height:70px;}
+.uploader-textarea:focus{border-color:var(--accent);}
+.uploader-run-row{display:flex;gap:8px;margin-top:10px;align-items:center;}
+.ep-method.post{background:rgba(232,105,154,.12);color:#e8699a;border-color:rgba(232,105,154,.3);}
+.pt-method.post{background:rgba(232,105,154,.12);color:#e8699a;border-color:rgba(232,105,154,.3);}
+
 .errors{background:var(--surface);border:1px solid var(--border);margin-top:40px;transition:background .2s,border .2s;}
 .errors .schema{border:none;}
 .errors-hd{padding:12px 18px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--muted);}
@@ -984,7 +1020,7 @@ function buildFolders(categories, baseUrl) {
       row.innerHTML = `
         <div class="tree-vert"></div>
         <div class="tree-horiz"></div>
-        <span class="ep-method">GET</span>
+        <span class="ep-method${item.method === 'POST' || item.path.split('?')[0].includes('/cloud/lumiuploader') ? ' post' : ''}">${item.method === 'POST' || item.path.split('?')[0].includes('/cloud/lumiuploader') ? 'POST' : 'GET'}</span>
         <span class="ep-name">${item.name}<span class="ep-desc-inline">${item.desc ? ' — ' + item.desc : ''}</span></span>
         <span class="ep-copy" id="copy-${epId}" title="Copy URL" onclick="copyEndpoint(event,'${epId}','${baseUrl}${item.path}')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2H3.5A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg></span>`;
       row.onclick = (e) => {
@@ -998,7 +1034,8 @@ function buildFolders(categories, baseUrl) {
       var _pathBase2 = item.path.split('?')[0];
       var _qs2 = item.path.includes('?') ? item.path.split('?')[1] : '';
       var _params2 = _qs2 ? _qs2.split('&').map(function(p){return{key:p.split('=')[0],val:p.split('=')[1]||''};}) : [];
-      window._modalMeta[epId] = { pathBase: _pathBase2, params: _params2, name: item.name };
+      var _isPost2 = item.method === 'POST' || _pathBase2.includes('/cloud/lumiuploader');
+      window._modalMeta[epId] = { pathBase: _pathBase2, params: _params2, name: item.name, isPost: _isPost2 };
     });
 
     folder.appendChild(content);
@@ -1013,6 +1050,10 @@ function buildPanel(root, epId, item, baseUrl, catName) {
     ? queryStr.split('&').map(p => ({ key: p.split('=')[0], val: p.split('=')[1] || '' }))
     : [];
 
+  // Detect POST endpoints (lumiuploader)
+  const isPost = item.method === 'POST' || pathBase.includes('/cloud/lumiuploader');
+  const methodLabel = isPost ? 'POST' : 'GET';
+
   const panel = document.createElement('div');
   panel.className = 'detail-panel';
   panel.id = `detail-${epId}`;
@@ -1020,9 +1061,15 @@ function buildPanel(root, epId, item, baseUrl, catName) {
   const pathDisplay = pathBase +
     (params.length ? '?' + params.map(p => `<span class="pq">${p.key}=</span><span class="pq">{${p.key}}</span>`).join('&') : '');
 
+  const methodClass = isPost ? 'pt-method post' : 'pt-method';
+  const reqBlock = isPost
+    ? `<div class="code-block"><span class="ck">POST</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">${pathBase}</span><br><span class="cs">Content-Type</span>: <span class="cn">multipart/form-data</span> <span style="color:var(--muted)">// galeri</span><br><span class="cs">Content-Type</span>: <span class="cn">application/json</span> <span style="color:var(--muted)">// url / base64</span></div>
+      <div class="code-block" style="margin-top:6px"><span style="color:var(--muted);font-size:10px">// JSON — from URL</span><br><span class="cn">{ "url": "https://..." }</span><br><span style="color:var(--muted);font-size:10px">// JSON — from base64</span><br><span class="cn">{ "base64": "...", "filename": "file.jpg", "mimeType": "image/jpeg" }</span><br><span style="color:var(--muted);font-size:10px">// JSON — multiple URLs</span><br><span class="cn">{ "urls": ["https://...", "https://..."] }</span></div>`
+    : `<div class="code-block"><span class="ck">GET</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">${pathBase}</span>${params.length ? '<span class="cb">?' + params.map(p=>`<span class="cs">${p.key}</span>=<span class="cn">{value}</span>`).join('&amp;') + '</span>' : ''}</div>`;
+
   panel.innerHTML = `
     <div class="panel-title">
-      <span class="pt-method">GET</span>
+      <span class="${methodClass}">${methodLabel}</span>
       <span class="pt-path">${pathDisplay}</span>
       <span class="pt-name">${item.name}</span>
     </div>
@@ -1032,18 +1079,27 @@ function buildPanel(root, epId, item, baseUrl, catName) {
       <div class="ptab"        onclick="switchTab('${epId}','tester')">Try It</div>
     </div>
     <div class="tab-pane active" id="tab-${epId}-params">
-      ${buildParamsTable(params)}
+      ${isPost ? buildUploaderParamsTable() : buildParamsTable(params)}
     </div>
     <div class="tab-pane" id="tab-${epId}-request">
-      <div class="code-block">
-        <span class="ck">GET</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">${pathBase}</span>${params.length ? '<span class="cb">?' + params.map(p=>`<span class="cs">${p.key}</span>=<span class="cn">{value}</span>`).join('&amp;') + '</span>' : ''}
-      </div>
+      ${reqBlock}
     </div>
     <div class="tab-pane" id="tab-${epId}-tester"></div>`;
 
   root.appendChild(panel);
   var _tp = panel.querySelector('[id="tab-' + epId + '-tester"]');
-  if (_tp) _tp.appendChild(buildTester(epId, pathBase, params, item.name));
+  if (_tp) _tp.appendChild(isPost ? buildUploaderTester(epId, pathBase, item.name) : buildTester(epId, pathBase, params, item.name));
+}
+
+function buildUploaderParamsTable() {
+  return `<div class="table-scroll"><table class="params-table"><thead><tr><th>Field</th><th>Type</th><th>Mode</th><th>Description</th></tr></thead><tbody>
+    <tr><td class="pn">file</td><td class="pt">file</td><td><span class="req-tag">multipart</span></td><td style="font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted)">Upload file dari galeri / device</td></tr>
+    <tr><td class="pn">url</td><td class="pt">string</td><td><span class="req-tag" style="background:rgba(45,125,210,.1);color:#2d7dd2;border-color:rgba(45,125,210,.3)">json</span></td><td style="font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted)">URL file yang mau diupload</td></tr>
+    <tr><td class="pn">urls[]</td><td class="pt">array</td><td><span class="req-tag" style="background:rgba(45,125,210,.1);color:#2d7dd2;border-color:rgba(45,125,210,.3)">json</span></td><td style="font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted)">Array URL untuk bulk upload</td></tr>
+    <tr><td class="pn">base64</td><td class="pt">string</td><td><span class="req-tag" style="background:rgba(45,125,210,.1);color:#2d7dd2;border-color:rgba(45,125,210,.3)">json</span></td><td style="font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted)">Base64 string (bisa include data URI)</td></tr>
+    <tr><td class="pn">filename</td><td class="pt">string</td><td><span class="req-tag" style="background:rgba(45,125,210,.1);color:#2d7dd2;border-color:rgba(45,125,210,.3)">json</span></td><td style="font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted)">Nama file (opsional, untuk base64)</td></tr>
+    <tr><td class="pn">mimeType</td><td class="pt">string</td><td><span class="req-tag" style="background:rgba(45,125,210,.1);color:#2d7dd2;border-color:rgba(45,125,210,.3)">json</span></td><td style="font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted)">MIME type (opsional, untuk base64)</td></tr>
+  </tbody></table></div>`;
 }
 
 function buildParamsTable(params) {
@@ -1102,14 +1158,286 @@ function buildTester(epId, pathBase, params, name) {
   stat.style.display = 'none';
   var res = document.createElement('div');
   res.className = 'generic-result';
+  var mediaWrap = document.createElement('div');
+  mediaWrap.className = 'media-preview';
 
   btn.addEventListener('click', function() {
-    runGenericDirect(pathBase, params, inputs, btn, stat, res);
+    runGenericDirect(pathBase, params, inputs, btn, stat, res, mediaWrap);
   });
 
   runRow.appendChild(btn);
   wrap.appendChild(runRow);
   wrap.appendChild(stat);
+  wrap.appendChild(mediaWrap);
+  wrap.appendChild(res);
+  return wrap;
+}
+
+function buildUploaderTester(epId, pathBase, name) {
+  var BASE = 'https://api.lumi-base.my.id';
+  var wrap = document.createElement('div');
+  wrap.className = 'tester';
+
+  // Header
+  var hd = document.createElement('div');
+  hd.className = 'tester-hd';
+  hd.textContent = 'Live Tester — ' + name;
+  wrap.appendChild(hd);
+
+  // Tab bar
+  var tabBar = document.createElement('div');
+  tabBar.className = 'uploader-tabs';
+  ['Galeri / File', 'Via API (JSON)'].forEach(function(label, i) {
+    var t = document.createElement('div');
+    t.className = 'uploader-tab' + (i === 0 ? ' active' : '');
+    t.textContent = label;
+    t.addEventListener('click', function() {
+      tabBar.querySelectorAll('.uploader-tab').forEach(function(x){ x.classList.remove('active'); });
+      wrap.querySelectorAll('.uploader-pane').forEach(function(x){ x.classList.remove('active'); });
+      t.classList.add('active');
+      panes[i].classList.add('active');
+    });
+    tabBar.appendChild(t);
+  });
+  wrap.appendChild(tabBar);
+
+  var panes = [document.createElement('div'), document.createElement('div')];
+  panes.forEach(function(p, i){ p.className = 'uploader-pane' + (i === 0 ? ' active' : ''); wrap.appendChild(p); });
+
+  // Shared result area
+  var stat = document.createElement('div');
+  stat.className = 'run-status'; stat.style.display = 'none';
+  var res = document.createElement('div');
+  res.className = 'generic-result';
+  var mediaWrap = document.createElement('div');
+  mediaWrap.className = 'media-preview';
+
+  // ── PANE 0: Galeri / File picker ──────────────────────────────────────────
+  var selectedFiles = [];
+  var dropZone = document.createElement('div');
+  dropZone.className = 'uploader-drop';
+  dropZone.innerHTML = '<div class="uploader-drop-icon">📎</div><div class="uploader-drop-txt">Klik atau drag & drop file ke sini</div><div class="uploader-drop-sub">Foto, video, dokumen — maks 25MB per file</div>';
+  var fileInput = document.createElement('input');
+  fileInput.type = 'file'; fileInput.multiple = true;
+  fileInput.accept = 'image/*,video/*,audio/*,.pdf,.zip,.txt';
+  dropZone.appendChild(fileInput);
+
+  var fileList = document.createElement('div');
+  fileList.className = 'uploader-file-list';
+
+  function renderFiles() {
+    fileList.innerHTML = '';
+    selectedFiles.forEach(function(f, idx) {
+      var item = document.createElement('div');
+      item.className = 'uploader-file-item';
+      var thumb = '';
+      if (f.type.startsWith('image/')) {
+        var url = URL.createObjectURL(f);
+        thumb = '<img class="uploader-file-item-thumb" src="' + url + '" />';
+      } else {
+        var icon = f.type.startsWith('video/') ? '🎬' : f.type.startsWith('audio/') ? '🎵' : '📄';
+        thumb = '<span style="font-size:22px;width:32px;text-align:center">' + icon + '</span>';
+      }
+      var kb = (f.size / 1024).toFixed(1);
+      item.innerHTML = thumb +
+        '<span class="uploader-file-item-name">' + f.name + '</span>' +
+        '<span class="uploader-file-item-size">' + kb + ' KB</span>' +
+        '<span class="uploader-file-item-remove" title="Remove">✕</span>';
+      item.querySelector('.uploader-file-item-remove').addEventListener('click', function(){ selectedFiles.splice(idx,1); renderFiles(); });
+      fileList.appendChild(item);
+    });
+  }
+
+  fileInput.addEventListener('change', function() {
+    Array.from(fileInput.files).forEach(function(f){ selectedFiles.push(f); });
+    fileInput.value = '';
+    renderFiles();
+  });
+  dropZone.addEventListener('click', function(e){ if(e.target !== fileInput) fileInput.click(); });
+  dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag'); });
+  dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag'); });
+  dropZone.addEventListener('drop', function(e){
+    e.preventDefault(); dropZone.classList.remove('drag');
+    Array.from(e.dataTransfer.files).forEach(function(f){ selectedFiles.push(f); });
+    renderFiles();
+  });
+
+  var uploadBtn = document.createElement('button');
+  uploadBtn.className = 't-btn'; uploadBtn.textContent = 'Upload';
+  var uploadRow = document.createElement('div');
+  uploadRow.className = 'uploader-run-row';
+  uploadRow.appendChild(uploadBtn);
+
+  uploadBtn.addEventListener('click', async function() {
+    if (selectedFiles.length === 0) {
+      stat.style.display = 'flex'; stat.className = 'run-status fail'; stat.textContent = '✖ Pilih file dulu';
+      return;
+    }
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<span class="ldots"><span></span><span></span><span></span></span>';
+    stat.style.display = 'flex'; stat.className = 'run-status loading'; stat.textContent = 'Uploading...';
+    res.style.display = 'none'; res.textContent = '';
+    mediaWrap.innerHTML = ''; mediaWrap.className = 'media-preview';
+
+    try {
+      var fd = new FormData();
+      selectedFiles.forEach(function(f){ fd.append('file', f, f.name); });
+      var r = await fetch(BASE + pathBase, { method: 'POST', body: fd, cache: 'no-store' });
+      var raw = await r.text();
+      var json = JSON.parse(raw);
+      stat.className = 'run-status ' + (r.ok ? 'ok' : 'fail');
+      stat.textContent = r.ok ? '✓ ' + r.status + ' — ' + (json.uploaded || 0) + ' file uploaded' : '✖ HTTP ' + r.status;
+      res.style.display = 'block'; res.className = 'generic-result show' + (r.ok ? '' : ' err');
+      res.textContent = JSON.stringify(json, null, 2);
+      // Preview uploaded images
+      if (r.ok && json.results && json.results.length) {
+        var firstImg = json.results.find(function(x){ return /\.(jpg|jpeg|png|gif|webp)$/i.test(x.url); });
+        if (firstImg) {
+          mediaWrap.className = 'media-preview show';
+          mediaWrap.innerHTML = '<div class="media-preview-label">Preview hasil upload</div>';
+          var im = document.createElement('img'); im.src = firstImg.url; im.alt = 'uploaded';
+          mediaWrap.appendChild(im);
+        }
+      }
+    } catch(err) {
+      stat.className = 'run-status fail'; stat.textContent = '✖ ' + err.message;
+      res.style.display = 'block'; res.className = 'generic-result show err'; res.textContent = err.message;
+    }
+    uploadBtn.disabled = false; uploadBtn.textContent = 'Upload';
+  });
+
+  panes[0].appendChild(dropZone);
+  panes[0].appendChild(fileList);
+  panes[0].appendChild(uploadRow);
+
+  // ── PANE 1: Via API (JSON) ────────────────────────────────────────────────
+  var apiModes = ['url', 'urls[]', 'base64'];
+  var activeMode = 'url';
+  var modeBar = document.createElement('div');
+  modeBar.className = 'uploader-api-mode-select';
+  var modeBtns = {};
+  apiModes.forEach(function(m) {
+    var b = document.createElement('button');
+    b.className = 'uploader-api-mode-btn' + (m === 'url' ? ' active' : '');
+    b.textContent = m;
+    b.addEventListener('click', function() {
+      activeMode = m;
+      Object.values(modeBtns).forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      renderApiFields();
+    });
+    modeBtns[m] = b;
+    modeBar.appendChild(b);
+  });
+
+  var apiFieldArea = document.createElement('div');
+  apiFieldArea.className = 'uploader-api-rows';
+
+  var apiTextarea = document.createElement('textarea');
+  apiTextarea.className = 'uploader-textarea';
+
+  function renderApiFields() {
+    apiFieldArea.innerHTML = '';
+    var lbl = document.createElement('div');
+    lbl.className = 'uploader-api-field-lbl';
+    if (activeMode === 'url') {
+      lbl.textContent = 'URL file (foto/video/dokumen)';
+      apiTextarea.placeholder = 'https://example.com/image.jpg';
+      apiTextarea.style.minHeight = '40px';
+    } else if (activeMode === 'urls[]') {
+      lbl.textContent = 'Multiple URLs — satu URL per baris';
+      apiTextarea.placeholder = 'https://example.com/a.jpg\nhttps://example.com/b.mp4';
+      apiTextarea.style.minHeight = '80px';
+    } else {
+      lbl.textContent = 'Base64 string (boleh include data URI prefix)';
+      apiTextarea.placeholder = 'data:image/jpeg;base64,/9j/4AAQ... atau raw base64';
+      apiTextarea.style.minHeight = '80px';
+    }
+    apiFieldArea.appendChild(lbl);
+    apiFieldArea.appendChild(apiTextarea);
+
+    if (activeMode === 'base64') {
+      var fnRow = document.createElement('div');
+      fnRow.className = 'uploader-api-field-lbl'; fnRow.style.marginTop = '8px';
+      fnRow.textContent = 'filename (opsional)';
+      apiFieldArea.appendChild(fnRow);
+      apiFieldArea.appendChild(apiFilenameInput);
+      var mimeRow = document.createElement('div');
+      mimeRow.className = 'uploader-api-field-lbl'; mimeRow.style.marginTop = '8px';
+      mimeRow.textContent = 'mimeType (opsional, e.g. image/jpeg)';
+      apiFieldArea.appendChild(mimeRow);
+      apiFieldArea.appendChild(apiMimeInput);
+    }
+  }
+
+  var apiFilenameInput = document.createElement('input');
+  apiFilenameInput.className = 'param-field-input'; apiFilenameInput.placeholder = 'file.jpg';
+  var apiMimeInput = document.createElement('input');
+  apiMimeInput.className = 'param-field-input'; apiMimeInput.placeholder = 'image/jpeg';
+
+  var apiRunBtn = document.createElement('button');
+  apiRunBtn.className = 't-btn'; apiRunBtn.textContent = 'Run';
+  var apiRunRow = document.createElement('div');
+  apiRunRow.className = 'uploader-run-row';
+  apiRunRow.appendChild(apiRunBtn);
+
+  apiRunBtn.addEventListener('click', async function() {
+    var val = apiTextarea.value.trim();
+    if (!val) { stat.style.display='flex'; stat.className='run-status fail'; stat.textContent='✖ Isi field dulu'; return; }
+    apiRunBtn.disabled = true;
+    apiRunBtn.innerHTML = '<span class="ldots"><span></span><span></span><span></span></span>';
+    stat.style.display='flex'; stat.className='run-status loading'; stat.textContent='Fetching...';
+    res.style.display='none'; res.textContent='';
+    mediaWrap.innerHTML=''; mediaWrap.className='media-preview';
+
+    try {
+      var body;
+      if (activeMode === 'url') {
+        body = { url: val };
+      } else if (activeMode === 'urls[]') {
+        body = { urls: val.split('\n').map(function(s){return s.trim();}).filter(Boolean) };
+      } else {
+        body = { base64: val };
+        if (apiFilenameInput.value.trim()) body.filename = apiFilenameInput.value.trim();
+        if (apiMimeInput.value.trim()) body.mimeType = apiMimeInput.value.trim();
+      }
+
+      var r = await fetch(BASE + pathBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        cache: 'no-store'
+      });
+      var raw = await r.text();
+      var json = JSON.parse(raw);
+      stat.className = 'run-status ' + (r.ok ? 'ok' : 'fail');
+      stat.textContent = r.ok ? '✓ ' + r.status + ' — ' + (json.uploaded || 0) + ' uploaded' : '✖ HTTP ' + r.status + (json.message ? ' — ' + json.message : '');
+      res.style.display='block'; res.className='generic-result show'+(r.ok?'':' err');
+      res.textContent = JSON.stringify(json, null, 2);
+      if (r.ok && json.results && json.results.length) {
+        var firstImg = json.results.find(function(x){ return /\.(jpg|jpeg|png|gif|webp)$/i.test(x.url); });
+        if (firstImg) {
+          mediaWrap.className='media-preview show';
+          mediaWrap.innerHTML='<div class="media-preview-label">Preview hasil upload</div>';
+          var im=document.createElement('img'); im.src=firstImg.url; im.alt='uploaded';
+          mediaWrap.appendChild(im);
+        }
+      }
+    } catch(err) {
+      stat.className='run-status fail'; stat.textContent='✖ '+err.message;
+      res.style.display='block'; res.className='generic-result show err'; res.textContent=err.message;
+    }
+    apiRunBtn.disabled=false; apiRunBtn.textContent='Run';
+  });
+
+  panes[1].appendChild(modeBar);
+  panes[1].appendChild(apiFieldArea);
+  panes[1].appendChild(apiRunRow);
+  renderApiFields();
+
+  // Shared result elements appended after panes
+  wrap.appendChild(stat);
+  wrap.appendChild(mediaWrap);
   wrap.appendChild(res);
   return wrap;
 }
@@ -1164,7 +1492,7 @@ function openModal(id) {
     if (srcParams) paneEls[0].innerHTML = srcParams.innerHTML;
     if (srcReq)    paneEls[1].innerHTML = srcReq.innerHTML;
   }
-  paneEls[2].appendChild(buildTester(id, meta.pathBase, meta.params, meta.name));
+  paneEls[2].appendChild(meta.isPost ? buildUploaderTester(id, meta.pathBase, meta.name) : buildTester(id, meta.pathBase, meta.params, meta.name));
 
   document.querySelectorAll('.ep-row').forEach(function(r) { r.classList.remove('active'); });
   var row = document.getElementById('eprow-' + id);
@@ -1212,7 +1540,7 @@ function copyEndpoint(e, id, url) {
   });
 }
 
-async function runGenericDirect(pathBase, params, inputs, btn, stat, res) {
+async function runGenericDirect(pathBase, params, inputs, btn, stat, res, mediaWrap) {
   var COPY_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2H3.5A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg>Copy';
 
   function setStatus(cls, msg) {
@@ -1246,23 +1574,85 @@ async function runGenericDirect(pathBase, params, inputs, btn, stat, res) {
   btn.innerHTML = '<span class="ldots"><span></span><span></span><span></span></span>';
   setStatus('loading', 'Fetching...');
   res.style.display = 'none'; res.textContent = '';
+  if (mediaWrap) { mediaWrap.innerHTML = ''; mediaWrap.className = 'media-preview'; }
 
   try {
-    var r = await fetch(url, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
-    var raw = await r.text();
-    try {
-      var json = JSON.parse(raw);
-      setStatus(r.ok ? 'ok' : 'fail',
-        r.ok ? '✓ ' + r.status + ' OK' + (json.total != null ? ' — ' + json.total + ' hasil' : '')
-              : '✖ HTTP ' + r.status + (json.message ? ' — ' + json.message : ''));
-      res.style.display = 'block';
-      res.className = 'generic-result show' + (r.ok ? '' : ' err');
-      res.textContent = JSON.stringify(json, null, 2);
-    } catch(e) {
-      setStatus(r.ok ? 'ok' : 'fail', r.ok ? '✓ ' + r.status : '✖ HTTP ' + r.status);
-      res.style.display = 'block';
-      res.className = 'generic-result show' + (r.ok ? '' : ' err');
-      res.textContent = raw.slice(0, 1000);
+    var r = await fetch(url, { cache: 'no-store' });
+    var ct = (r.headers.get('content-type') || '').toLowerCase();
+
+    // ── Image preview
+    if (ct.startsWith('image/')) {
+      var blob = await r.blob();
+      var objUrl = URL.createObjectURL(blob);
+      setStatus(r.ok ? 'ok' : 'fail', r.ok ? '✓ ' + r.status + ' — ' + ct : '✖ HTTP ' + r.status);
+      if (mediaWrap) {
+        mediaWrap.className = 'media-preview show';
+        mediaWrap.innerHTML = '<div class="media-preview-label">Preview</div>';
+        var img = document.createElement('img');
+        img.src = objUrl;
+        img.alt = 'response image';
+        mediaWrap.appendChild(img);
+        var dlBtn = document.createElement('a');
+        dlBtn.href = objUrl;
+        dlBtn.download = 'result.' + (ct.split('/')[1] || 'png');
+        dlBtn.className = 'copy-result-btn';
+        dlBtn.style.cssText = 'display:inline-flex;margin-top:8px;text-decoration:none;';
+        dlBtn.innerHTML = '⬇ Download';
+        mediaWrap.appendChild(dlBtn);
+      }
+    }
+    // ── Video preview
+    else if (ct.startsWith('video/')) {
+      var blob = await r.blob();
+      var objUrl = URL.createObjectURL(blob);
+      setStatus(r.ok ? 'ok' : 'fail', r.ok ? '✓ ' + r.status + ' — ' + ct : '✖ HTTP ' + r.status);
+      if (mediaWrap) {
+        mediaWrap.className = 'media-preview show';
+        mediaWrap.innerHTML = '<div class="media-preview-label">Preview</div>';
+        var vid = document.createElement('video');
+        vid.src = objUrl; vid.controls = true; vid.style.maxHeight = '320px';
+        mediaWrap.appendChild(vid);
+      }
+    }
+    // ── Audio preview
+    else if (ct.startsWith('audio/')) {
+      var blob = await r.blob();
+      var objUrl = URL.createObjectURL(blob);
+      setStatus(r.ok ? 'ok' : 'fail', r.ok ? '✓ ' + r.status + ' — ' + ct : '✖ HTTP ' + r.status);
+      if (mediaWrap) {
+        mediaWrap.className = 'media-preview show';
+        mediaWrap.innerHTML = '<div class="media-preview-label">Preview</div>';
+        var aud = document.createElement('audio');
+        aud.src = objUrl; aud.controls = true; aud.style.width = '100%';
+        mediaWrap.appendChild(aud);
+      }
+    }
+    // ── JSON / text
+    else {
+      var raw = await r.text();
+      try {
+        var json = JSON.parse(raw);
+        // Check if JSON result contains image URL to auto-preview
+        var previewUrl = json.result || json.url || json.image || (json.results && json.results[0] && json.results[0].url);
+        if (previewUrl && mediaWrap && typeof previewUrl === 'string' && /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(previewUrl)) {
+          mediaWrap.className = 'media-preview show';
+          mediaWrap.innerHTML = '<div class="media-preview-label">Preview</div>';
+          var img2 = document.createElement('img');
+          img2.src = previewUrl; img2.alt = 'result';
+          mediaWrap.appendChild(img2);
+        }
+        setStatus(r.ok ? 'ok' : 'fail',
+          r.ok ? '✓ ' + r.status + ' OK' + (json.total != null ? ' — ' + json.total + ' hasil' : '')
+                : '✖ HTTP ' + r.status + (json.message ? ' — ' + json.message : ''));
+        res.style.display = 'block';
+        res.className = 'generic-result show' + (r.ok ? '' : ' err');
+        res.textContent = JSON.stringify(json, null, 2);
+      } catch(e) {
+        setStatus(r.ok ? 'ok' : 'fail', r.ok ? '✓ ' + r.status : '✖ HTTP ' + r.status);
+        res.style.display = 'block';
+        res.className = 'generic-result show' + (r.ok ? '' : ' err');
+        res.textContent = raw.slice(0, 1000);
+      }
     }
   } catch(err) {
     setStatus('fail', '✖ ' + err.message);
