@@ -119,6 +119,21 @@ module.exports = function(app) {
         return res.redirect(302, `${GH_RAW}/${encodeURIComponent(filename)}`);
     });
 
+    app.get('/cloud/lumiuploader', (req, res) => {
+        res.json({
+            status: true,
+            endpoint: '/cloud/lumiuploader',
+            method: 'POST',
+            description: 'Upload foto, video, gif, atau file ke cloud dan dapatkan URL langsung.',
+            usage: {
+                'single base64': 'POST { "base64": "data:image/png;base64,..." }',
+                'multi base64':  'POST { "files": [{ "base64": "...", "filename": "a.png" }] }',
+                'single url':    'POST { "url": "https://example.com/photo.jpg" }',
+                'multi url':     'POST { "urls": ["https://...", "https://..."] }',
+            },
+        });
+    });
+
     app.post('/cloud/lumiuploader', heavyLimiter, async (req, res) => {
         try {
             const body    = req.body || {};
