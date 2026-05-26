@@ -18,7 +18,12 @@
           "name": "Venice Ai",
           "desc": "Chat with Venice Ai assistant",
           "path": "/ai/venice?text="
-        }
+        },
+        {
+          "name": "Venice Ai Image Gen",
+          "desc": "AI generator untuk membuat gambar keren dari teks prompt. Cocok untuk membuat art, anime, realistic image, wallpaper, logo, dan berbagai desain otomatis dengan teknologi AI.",
+          "path": "/ai/veniceimggen?prompt="
+       }
       ]
     },
     {
