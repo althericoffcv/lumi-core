@@ -33,21 +33,53 @@ function generateFilename(ext) {
     return `lumi_${ts}_${rand}.${ext}`;
 }
 
+// Ambil SHA file yang sudah ada di GitHub (kalau belum ada return null)
+function getFileSha(filePath) {
+    return new Promise((resolve) => {
+        const token = getToken();
+        const options = {
+            hostname: 'api.github.com',
+            path: `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`,
+            method: 'GET',
+            headers: {
+                'Authorization': `token ${token}`,
+                'User-Agent': 'lumi-base-uploader',
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        };
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', c => data += c);
+            res.on('end', () => {
+                try { resolve(JSON.parse(data).sha || null); }
+                catch { resolve(null); }
+            });
+        });
+        req.on('error', () => resolve(null));
+        req.end();
+    });
+}
+
 // Upload file ke GitHub via API
 function uploadToGithub(filename, base64Content) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         const token = getToken();
         if (!token) return reject(new Error('GBTOKEN tidak ditemukan di environment'));
 
-        const path = `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FOLDER}/${filename}`;
-        const body = JSON.stringify({
-            message: `upload: ${filename}`,
-            content: base64Content
-        });
+        const filePath = `${GITHUB_FOLDER}/${filename}`;
+        const apiPath = `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`;
+
+        // Cek SHA kalau file sudah ada (butuh sha untuk overwrite)
+        const existingSha = await getFileSha(filePath);
+
+        const bodyObj = { message: `upload: ${filename}`, content: base64Content };
+        if (existingSha) bodyObj.sha = existingSha;
+
+        const body = JSON.stringify(bodyObj);
 
         const options = {
             hostname: 'api.github.com',
-            path,
+            path: apiPath,
             method: 'PUT',
             headers: {
                 'Authorization': `token ${token}`,
@@ -62,14 +94,25 @@ function uploadToGithub(filename, base64Content) {
             let data = '';
             res.on('data', c => data += c);
             res.on('end', () => {
-                if (res.statusCode === 201) {
+                if (res.statusCode === 201 || res.statusCode === 200) {
                     resolve(`${BASE_URL}/${filename}`);
                 } else {
                     try {
                         const json = JSON.parse(data);
-                        reject(new Error(`GitHub error: ${json.message || data.slice(0, 100)}`));
+                        const detail = json.message || data.slice(0, 200);
+                        if (res.statusCode === 404) {
+                            reject(new Error(`GitHub 404: Repo "${GITHUB_OWNER}/${GITHUB_REPO}" atau folder "${GITHUB_FOLDER}" tidak ditemukan. Pastikan repo & folder sudah dibuat.`));
+                        } else if (res.statusCode === 401) {
+                            reject(new Error(`GitHub 401: Token tidak valid atau expired. Cek env GBTOKEN.`));
+                        } else if (res.statusCode === 403) {
+                            reject(new Error(`GitHub 403: Token tidak punya scope "repo". Detail: ${detail}`));
+                        } else if (res.statusCode === 422) {
+                            reject(new Error(`GitHub 422: File conflict. Detail: ${detail}`));
+                        } else {
+                            reject(new Error(`GitHub error ${res.statusCode}: ${detail}`));
+                        }
                     } catch {
-                        reject(new Error(`GitHub error ${res.statusCode}: ${data.slice(0, 100)}`));
+                        reject(new Error(`GitHub error ${res.statusCode}: ${data.slice(0, 200)}`));
                     }
                 }
             });
