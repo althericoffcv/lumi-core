@@ -1062,7 +1062,7 @@ function buildFolders(categories, baseUrl) {
       var _qs2 = item.path.includes('?') ? item.path.split('?')[1] : '';
       var _params2 = _qs2 ? _qs2.split('&').map(function(p){return{key:p.split('=')[0],val:p.split('=')[1]||''};}) : [];
       var _isPost2 = item.method === 'POST' || _pathBase2.includes('/cloud/lumiuploader');
-      var _isSession2 = item.sessionMode === true || _pathBase2.includes('/ai/venice/session');
+      var _isSession2 = item.sessionMode === true || _pathBase2.includes('/session/');
       window._modalMeta[epId] = { pathBase: _pathBase2, params: _params2, name: item.name, isPost: _isPost2, isSession: _isSession2 };
     });
 
@@ -1079,7 +1079,7 @@ function buildPanel(root, epId, item, baseUrl, catName) {
     : [];
 
   // Detect session endpoints
-  const isSession = item.sessionMode === true || pathBase.includes('/ai/venice/session');
+  const isSession = item.sessionMode === true || pathBase.includes('/session/');
   // Detect POST endpoints (lumiuploader or session)
   const isPost = isSession || item.method === 'POST' || pathBase.includes('/cloud/lumiuploader');
   const methodLabel = isPost ? 'POST' : 'GET';
@@ -1092,11 +1092,12 @@ function buildPanel(root, epId, item, baseUrl, catName) {
     (params.length ? '?' + params.map(p => `<span class="pq">${p.key}=</span><span class="pq">{${p.key}}</span>`).join('&') : '');
 
   const methodClass = isPost ? 'pt-method post' : 'pt-method';
+  const sessionBase = isSession ? pathBase.replace(/\/chat$/, '') : '';
   const reqBlock = isSession
-    ? `<div class="code-block"><span class="ck">POST</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">/ai/venice/session/new</span><br><span style="color:var(--muted);font-size:10px">// 1. Buat session</span></div>
-       <div class="code-block" style="margin-top:6px"><span class="ck">POST</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">/ai/venice/session/chat</span><br><span class="cn">{ "session_id": "...", "text": "halo!" }</span></div>
-       <div class="code-block" style="margin-top:6px"><span class="ck">GET</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">/ai/venice/session/history?session_id=...</span><br><span style="color:var(--muted);font-size:10px">// Lihat history percakapan</span></div>
-       <div class="code-block" style="margin-top:6px"><span class="ck">DELETE</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">/ai/venice/session/clear</span><br><span class="cn">{ "session_id": "..." }</span><br><span style="color:var(--muted);font-size:10px">// Hapus session</span></div>`
+    ? `<div class="code-block"><span class="ck">POST</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">${sessionBase}/new</span><br><span style="color:var(--muted);font-size:10px">// 1. Buat session</span></div>
+       <div class="code-block" style="margin-top:6px"><span class="ck">POST</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">${sessionBase}/chat</span><br><span class="cn">{ "session_id": "...", "text": "halo!" }</span></div>
+       <div class="code-block" style="margin-top:6px"><span class="ck">GET</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">${sessionBase}/history?session_id=...</span><br><span style="color:var(--muted);font-size:10px">// Lihat history percakapan</span></div>
+       <div class="code-block" style="margin-top:6px"><span class="ck">DELETE</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">${sessionBase}/clear</span><br><span class="cn">{ "session_id": "..." }</span><br><span style="color:var(--muted);font-size:10px">// Hapus session</span></div>`
     : isPost
     ? `<div class="code-block"><span class="ck">POST</span>&nbsp;<span class="cb">${baseUrl}</span><span class="cv">${pathBase}</span><br><span class="cs">Content-Type</span>: <span class="cn">multipart/form-data</span> <span style="color:var(--muted)">// galeri</span><br><span class="cs">Content-Type</span>: <span class="cn">application/json</span> <span style="color:var(--muted)">// url / base64</span></div>
       <div class="code-block" style="margin-top:6px"><span style="color:var(--muted);font-size:10px">// JSON — from URL</span><br><span class="cn">{ "url": "https://..." }</span><br><span style="color:var(--muted);font-size:10px">// JSON — from base64</span><br><span class="cn">{ "base64": "...", "filename": "file.jpg", "mimeType": "image/jpeg" }</span><br><span style="color:var(--muted);font-size:10px">// JSON — multiple URLs</span><br><span class="cn">{ "urls": ["https://...", "https://..."] }</span></div>`
@@ -1533,7 +1534,7 @@ function buildSessionTester(epId, pathBase, name) {
   msgArea.className = 'session-messages';
 
   function renderEmpty() {
-    msgArea.innerHTML = '<div class="session-empty"><div class="session-empty-icon">💬</div>Mulai percakapan dengan Venice AI<br><span style="font-size:10px;opacity:.7">Buat session baru, lalu ketik pesan</span></div>';
+    msgArea.innerHTML = '<div class="session-empty"><div class="session-empty-icon">💬</div>Mulai percakapan dengan ' + name + '<br><span style="font-size:10px;opacity:.7">Buat session baru, lalu ketik pesan</span></div>';
   }
   renderEmpty();
   chatWrap.appendChild(msgArea);
@@ -1567,7 +1568,7 @@ function buildSessionTester(epId, pathBase, name) {
     msg.className = 'session-msg ' + role;
     var roleLabel = document.createElement('div');
     roleLabel.className = 'session-msg-role';
-    roleLabel.textContent = role === 'user' ? 'Kamu' : 'Venice AI';
+    roleLabel.textContent = role === 'user' ? 'Kamu' : name;
     var bubble = document.createElement('div');
     bubble.className = 'session-msg-bubble' + (typing ? ' typing' : '');
     bubble.textContent = typing ? '...' : text;
@@ -1589,7 +1590,8 @@ function buildSessionTester(epId, pathBase, name) {
     newBtn.disabled = true;
     newBtn.textContent = '...';
     try {
-      var r = await fetch(BASE + '/ai/venice/session/new', { method: 'POST', cache: 'no-store' });
+      var sessionBase = pathBase.replace(/\/chat$/, '');
+      var r = await fetch(BASE + sessionBase + '/new', { method: 'POST', cache: 'no-store' });
       var json = await r.json();
       if (!r.ok || !json.session_id) throw new Error(json.message || 'Gagal buat session');
       currentSessionId = json.session_id;
@@ -1612,7 +1614,7 @@ function buildSessionTester(epId, pathBase, name) {
     if (!confirm('Hapus session ini? History akan hilang.')) return;
     clearBtn.disabled = true;
     try {
-      await fetch(BASE + '/ai/venice/session/clear', {
+      await fetch(BASE + sessionBase + '/clear', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: currentSessionId }),
@@ -1642,7 +1644,7 @@ function buildSessionTester(epId, pathBase, name) {
     var typingBubble = addBubble('assistant', '', true);
 
     try {
-      var r = await fetch(BASE + '/ai/venice/session/chat', {
+      var r = await fetch(BASE + sessionBase + '/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: currentSessionId, text }),
