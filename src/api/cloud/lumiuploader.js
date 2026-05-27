@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { Readable } = require('stream');
 
 const GITHUB_OWNER = 'althericoffcv';
-const GITHUB_REPO = 'bf-uploader-db';
+const GITHUB_REPO = 'bf-upload-db';
 const GITHUB_FOLDER = 'bf-uploader/image';
 const BASE_URL = 'https://api.lumi-base.my.id/imgurl';
 
