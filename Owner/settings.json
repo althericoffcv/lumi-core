@@ -15,6 +15,11 @@
           "path": "/ai/deepseek?text="
         },
         {
+          "name": "Lumi AI Session",
+          "desc": "Chat with Deepseek assistant",
+          "path": "/ai/lumi?text="
+        },
+        {
           "name": "Venice Ai",
           "desc": "Chat with Venice Ai assistant",
           "path": "/ai/venice?text="
