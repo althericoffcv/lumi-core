@@ -5,30 +5,24 @@ module.exports = function(app) {
     app.get('/homepage/spotify', async (req, res) => {
         try {
             const { data: html } = await axios.get('https://open.spotify.com', {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept': 'text/html,application/xhtml+xml,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                },
                 timeout: 10000,
             });
 
             const $ = cheerio.load(html);
             const result = {};
 
-            // Loop tiap section/carousel
-            $('[data-testid="carousel-mwp"]').each((i, carousel) => {
-                // Ambil judul section dari elemen sebelumnya
-                const heading = $(carousel).closest('div').prev().find('h2 a, h2').first().text().trim();
-                const sectionTitle = heading || `Section ${i + 1}`;
+            $('[data-testid="carousel-mwp"]').each((i, el) => {
+                // Heading ada di sibling sebelumnya (.l27FSrHNngAw2rXG > h2)
+                const headingEl = $(el).prev();
+                const heading = headingEl.find('h2').text().trim() || `Section ${i + 1}`;
 
                 const items = [];
 
-                $(carousel).find('[data-testid="home-card"]').each((j, card) => {
-                    const name = $(card).find('a[data-encore-id="listRowTitle"]').attr('title') ||
-                                 $(card).find('a[data-encore-id="listRowTitle"]').text().trim();
+                $(el).find('[data-testid="home-card"]').each((j, card) => {
+                    const anchor = $(card).find('a[data-encore-id="listRowTitle"]');
+                    const name = anchor.attr('title') || anchor.text().trim();
                     const thumbnail = $(card).find('img').attr('src');
-                    const href = $(card).find('a[data-encore-id="listRowTitle"]').attr('href');
+                    const href = anchor.attr('href');
                     const url = href ? `https://open.spotify.com${href}` : null;
 
                     if (name && thumbnail) {
@@ -37,7 +31,7 @@ module.exports = function(app) {
                 });
 
                 if (items.length > 0) {
-                    result[sectionTitle] = items;
+                    result[heading] = items;
                 }
             });
 
