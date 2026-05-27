@@ -10,9 +10,9 @@
       "name": "Artificial Intelligence",
       "items": [
         {
-          "name": "Lumi AI",
-          "desc": "Chat with Lumi AI assistant",
-          "path": "/ai/lumi?text="
+          "name": "Deepsek AI",
+          "desc": "Chat with Deepseek assistant",
+          "path": "/ai/deepseek?text="
         },
         {
           "name": "Venice Ai",
