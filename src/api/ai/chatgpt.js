@@ -39,7 +39,6 @@ class ChatGPTClient {
   }
 
   async initCookie() {
-    // Ambil cookie dari chatgpt.com untuk session anonymous
     const res = await fetch('https://chatgpt.com/', {
       headers: {
         'User-Agent': UA,
@@ -48,7 +47,6 @@ class ChatGPTClient {
       },
     });
     const setCookie = res.headers.get('set-cookie') || '';
-    // Ambil semua cookie key=value
     const cookies = setCookie.split(',').map(c => c.trim().split(';')[0]).join('; ');
     this.cookie = cookies || null;
   }
@@ -153,10 +151,7 @@ class ChatGPTClient {
       buffer = lines.pop() || '';
 
       for (const line of lines) {
-        if (line.startsWith('event: ')) {
-          currentEventType = line.slice(7).trim();
-          continue;
-        }
+        if (line.startsWith('event: ')) { currentEventType = line.slice(7).trim(); continue; }
         if (line.startsWith('data: ')) {
           const dataStr = line.slice(6);
           if (dataStr === '[DONE]') return { text: fullText, conversationId, assistantMessageId };
@@ -181,137 +176,227 @@ class ChatGPTClient {
   }
 }
 
-// Singleton client per session
-const clients = new Map();
+// ── Shared ChatGPT client (1 instance, re-init kalau perlu) ──────────────
+let sharedClient = new ChatGPTClient();
 
-function getClient(sessionId) {
-  if (!clients.has(sessionId)) {
-    clients.set(sessionId, {
-      client: new ChatGPTClient(),
-      conversationId: null,
-      parentMessageId: null,
-      lastUsed: Date.now(),
-    });
-  }
-  return clients.get(sessionId);
+async function ensureClient() {
+  if (!sharedClient.cookie) await sharedClient.initCookie();
+  return sharedClient;
 }
 
-// Cleanup session tidak aktif > 30 menit
-setInterval(() => {
+// ── Session store (untuk /ai/chatgpt/session/*) ───────────────────────────
+const sessionStore = new Map();
+const SESSION_TTL  = 60 * 60 * 1000; // 1 jam
+const MAX_SESSIONS = 500;
+const MAX_HISTORY  = 40; // 20 turn
+
+function pruneExpired() {
   const now = Date.now();
-  for (const [id, s] of clients.entries()) {
-    if (now - s.lastUsed > 30 * 60 * 1000) clients.delete(id);
+  for (const [id, s] of sessionStore) {
+    if (now - s.lastUsed > SESSION_TTL) sessionStore.delete(id);
   }
-}, 5 * 60 * 1000);
+}
+
+function createSession() {
+  pruneExpired();
+  if (sessionStore.size >= MAX_SESSIONS) {
+    let oldestId = null, oldestTime = Infinity;
+    for (const [id, s] of sessionStore) {
+      if (s.lastUsed < oldestTime) { oldestTime = s.lastUsed; oldestId = id; }
+    }
+    if (oldestId) sessionStore.delete(oldestId);
+  }
+  const id = randomUUID();
+  sessionStore.set(id, {
+    messages: [],          // [{ role: 'user'|'assistant', text }]
+    conversationId: null,  // ChatGPT conversation id
+    parentMessageId: null,
+    createdAt: Date.now(),
+    lastUsed: Date.now(),
+  });
+  return id;
+}
+
+function getSession(id) {
+  const s = sessionStore.get(id);
+  if (!s) return null;
+  if (Date.now() - s.lastUsed > SESSION_TTL) { sessionStore.delete(id); return null; }
+  s.lastUsed = Date.now();
+  return s;
+}
+
+// Cleanup tiap 5 menit
+setInterval(pruneExpired, 5 * 60 * 1000);
 
 module.exports = function(app) {
 
+  // ── Simple endpoints ─────────────────────────────────────────────────────
+
   // GET /ai/chatgpt?text=halo
-  // GET /ai/chatgpt?text=halo&session=xxx  (untuk multi-turn)
-  // GET /ai/chatgpt?text=halo&session=xxx&reset=true  (reset percakapan)
   app.get('/ai/chatgpt', async (req, res) => {
     const text = req.query.text?.trim();
-    const sessionId = req.query.session || 'default';
-    const reset = req.query.reset === 'true';
-
     if (!text) return res.status(400).json({
       status: false,
       message: "Parameter 'text' wajib diisi! Contoh: /ai/chatgpt?text=halo",
     });
 
     try {
-      const session = getClient(sessionId);
-      session.lastUsed = Date.now();
-
-      if (reset) {
-        session.conversationId = null;
-        session.parentMessageId = null;
-      }
-
-      // Init cookie kalau belum ada
-      if (!session.client.cookie) await session.client.initCookie();
-
-      // Prepare sentinel
-      try { await session.client.prepareSentinel(); } catch (_) {}
-
-      const result = await session.client.sendMessage(
-        text,
-        session.conversationId,
-        session.parentMessageId
-      );
-
-      session.conversationId = result.conversationId || session.conversationId;
-      session.parentMessageId = result.assistantMessageId || session.parentMessageId;
+      const client = await ensureClient();
+      try { await client.prepareSentinel(); } catch (_) {}
+      const result = await client.sendMessage(text);
 
       return res.json({
         status: true,
         category: 'Artificial Intelligence',
         query: text,
-        data: {
-          author: 'ChatGPT',
-          response: result.text,
-          session: sessionId,
-          conversation_id: session.conversationId,
-        },
+        data: { author: 'ChatGPT', response: result.text },
       });
-
     } catch (err) {
-      // Reset cookie supaya re-init di request berikutnya
-      const session = clients.get(sessionId);
-      if (session) session.client.cookie = null;
+      sharedClient = new ChatGPTClient(); // reset
       return res.status(500).json({ status: false, message: err.message });
     }
   });
 
-  // POST /ai/chatgpt  body: { text, session, reset }
+  // POST /ai/chatgpt  body: { text }
   app.post('/ai/chatgpt', async (req, res) => {
     const text = req.body.text?.trim();
-    const sessionId = req.body.session || 'default';
-    const reset = req.body.reset === true;
-
     if (!text) return res.status(400).json({
       status: false,
       message: "Body harus berisi 'text'",
     });
 
     try {
-      const session = getClient(sessionId);
-      session.lastUsed = Date.now();
+      const client = await ensureClient();
+      try { await client.prepareSentinel(); } catch (_) {}
+      const result = await client.sendMessage(text);
 
-      if (reset) {
-        session.conversationId = null;
-        session.parentMessageId = null;
-      }
+      return res.json({
+        status: true,
+        category: 'Artificial Intelligence',
+        query: text,
+        data: { author: 'ChatGPT', response: result.text },
+      });
+    } catch (err) {
+      sharedClient = new ChatGPTClient();
+      return res.status(500).json({ status: false, message: err.message });
+    }
+  });
 
-      if (!session.client.cookie) await session.client.initCookie();
-      try { await session.client.prepareSentinel(); } catch (_) {}
+  // ── Session endpoints ────────────────────────────────────────────────────
 
-      const result = await session.client.sendMessage(
-        text,
+  // POST /ai/chatgpt/session/new → buat session baru
+  app.post('/ai/chatgpt/session/new', (req, res) => {
+    const session_id = createSession();
+    res.json({
+      status: true,
+      message: 'Session berhasil dibuat.',
+      session_id,
+      expires_in: '1 jam sejak pesan terakhir',
+      max_history: MAX_HISTORY,
+    });
+  });
+
+  // POST /ai/chatgpt/session/chat  body: { session_id, text }
+  app.post('/ai/chatgpt/session/chat', async (req, res) => {
+    const { session_id, text } = req.body || {};
+
+    if (!session_id || typeof session_id !== 'string') {
+      return res.status(400).json({
+        status: false,
+        message: "Field 'session_id' wajib diisi. Buat session dulu via POST /ai/chatgpt/session/new",
+      });
+    }
+    if (!text?.trim()) {
+      return res.status(400).json({ status: false, message: "Field 'text' wajib diisi." });
+    }
+
+    const session = getSession(session_id);
+    if (!session) {
+      return res.status(404).json({
+        status: false,
+        message: 'Session tidak ditemukan atau sudah expired. Buat session baru via POST /ai/chatgpt/session/new',
+        session_id,
+      });
+    }
+
+    session.messages.push({ role: 'user', text: text.trim() });
+    while (session.messages.length > MAX_HISTORY) session.messages.splice(0, 2);
+
+    try {
+      const client = await ensureClient();
+      try { await client.prepareSentinel(); } catch (_) {}
+
+      const result = await client.sendMessage(
+        text.trim(),
         session.conversationId,
         session.parentMessageId
       );
 
       session.conversationId = result.conversationId || session.conversationId;
       session.parentMessageId = result.assistantMessageId || session.parentMessageId;
+      session.messages.push({ role: 'assistant', text: result.text });
 
       return res.json({
         status: true,
         category: 'Artificial Intelligence',
-        query: text,
+        session_id,
+        turn: Math.floor(session.messages.length / 2),
         data: {
           author: 'ChatGPT',
           response: result.text,
-          session: sessionId,
-          conversation_id: session.conversationId,
         },
       });
-
     } catch (err) {
-      const session = clients.get(sessionId);
-      if (session) session.client.cookie = null;
+      session.messages.pop(); // rollback user message
+      sharedClient = new ChatGPTClient();
       return res.status(500).json({ status: false, message: err.message });
     }
+  });
+
+  // GET /ai/chatgpt/session/history?session_id=xxx
+  app.get('/ai/chatgpt/session/history', (req, res) => {
+    const { session_id } = req.query;
+    if (!session_id) return res.status(400).json({
+      status: false,
+      message: "Parameter 'session_id' wajib diisi.",
+    });
+
+    const session = getSession(session_id);
+    if (!session) return res.status(404).json({
+      status: false,
+      message: 'Session tidak ditemukan atau sudah expired.',
+      session_id,
+    });
+
+    res.json({
+      status: true,
+      session_id,
+      turn: Math.floor(session.messages.length / 2),
+      created_at: new Date(session.createdAt).toISOString(),
+      history: session.messages.map((m, i) => ({
+        index: i + 1,
+        role: m.role,
+        text: m.text,
+      })),
+    });
+  });
+
+  // DELETE /ai/chatgpt/session/clear  body: { session_id }
+  app.delete('/ai/chatgpt/session/clear', (req, res) => {
+    const { session_id } = req.body || req.query || {};
+    if (!session_id) return res.status(400).json({
+      status: false,
+      message: "Field 'session_id' wajib diisi.",
+    });
+
+    const exists = sessionStore.has(session_id);
+    sessionStore.delete(session_id);
+
+    res.json({
+      status: true,
+      message: exists ? 'Session berhasil dihapus.' : 'Session tidak ditemukan (mungkin sudah expired).',
+      session_id,
+    });
   });
 
 };
