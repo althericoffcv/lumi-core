@@ -82,6 +82,11 @@
       "name": "Media",
       "items": [
         {
+          "name": "Tiktok Play",
+          "desc": "Search to play a song or video from Tiktok",
+          "path": "/media/ttplay?q="
+        },
+        {
           "name": "YouTube Play",
           "desc": "Search to play a song or video from YouTube",
           "path": "/media/ytplay?q="
@@ -95,6 +100,11 @@
           "name": "Pinterest",
           "desc": "Search images on Pinterest",
           "path": "/search/pinterest?q="
+        },
+        {
+          "name": "Tiktok",
+          "desc": "Search images/Video/Song in tiktok",
+          "path": "/search/tiktok?q="
         },
         {
           "name": "YouTube",
