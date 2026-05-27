@@ -66,6 +66,7 @@
           "desc": "Download video or slideshow from Instagram",
           "path": "/downloader/instagram?url="
         },
+        {
           "name": "Spotify",
           "desc": "Downloader MP3",
           "path": "/downloader/spotify?url="
