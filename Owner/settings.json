@@ -1,3 +1,4 @@
+
 {
   "name": "Lumi Base",
   "version": "1.0.0",
@@ -9,18 +10,6 @@
     {
       "name": "Artificial Intelligence",
       "items": [
-        {
-          "name": "ChatGPT",
-          "desc": "Chat with ChatGPT — support multi-turn conversation dengan session",
-          "path": "/ai/chatgpt?text="
-        },
-        {
-          "name": "ChatGPT Session",
-          "desc": "Chat with ChatGPT dengan session — percakapan tersimpan, bisa multi-turn, context aware",
-          "path": "/ai/chatgpt/session/chat",
-          "method": "POST",
-          "sessionMode": true
-        },
         {
           "name": "Deepsek AI",
           "desc": "Chat with Deepseek assistant",
