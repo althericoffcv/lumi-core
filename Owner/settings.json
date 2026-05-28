@@ -17,7 +17,7 @@
         },
         {
           "name": "Lumi AI Session",
-          "desc": "Chat with Deepseek assistant",
+          "desc": "Chat with Lumi assistant",
           "path": "/ai/lumi?text="
         },
         {
