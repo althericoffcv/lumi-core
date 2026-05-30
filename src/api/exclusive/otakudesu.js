@@ -1,60 +1,45 @@
-const axios = require("axios");
 const cheerio = require("cheerio");
-const { wrapper } = require("axios-cookiejar-support");
-const { CookieJar } = require("tough-cookie");
+const { gotScraping } = require("got-scraping");
 
 const AJAX_URL = "https://otakudesu.blog/wp-admin/admin-ajax.php";
 const BASE_URL = "https://otakudesu.blog";
 
-function createClient() {
-  const jar = new CookieJar();
-  const client = wrapper(axios.create({
-    jar,
-    timeout: 20000,
-    withCredentials: true,
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-      "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-      "Accept-Encoding": "gzip, deflate, br",
-      "Cache-Control": "no-cache",
-      "Pragma": "no-cache",
-      "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-      "Sec-Ch-Ua-Mobile": "?0",
-      "Sec-Ch-Ua-Platform": '"Windows"',
-      "Sec-Fetch-Dest": "document",
-      "Sec-Fetch-Mode": "navigate",
-      "Sec-Fetch-Site": "same-origin",
-      "Sec-Fetch-User": "?1",
-      "Upgrade-Insecure-Requests": "1",
-      "Referer": BASE_URL,
-    },
-  }));
-  return client;
-}
-
 async function fetchHTML(url) {
-  const client = createClient();
-  await client.get(BASE_URL).catch(() => {});
-  const { data } = await client.get(url);
-  return cheerio.load(data);
+  const res = await gotScraping({
+    url,
+    headerGeneratorOptions: {
+      browsers: [{ name: "chrome", minVersion: 120 }],
+      devices: ["desktop"],
+      locales: ["id-ID", "en-US"],
+      operatingSystems: ["windows"],
+    },
+  });
+
+  if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`);
+  return cheerio.load(res.body);
 }
 
 async function fetchAjax(params) {
-  const client = createClient();
-  await client.get(BASE_URL).catch(() => {});
-  const { data } = await client.post(AJAX_URL, params.toString(), {
+  const res = await gotScraping({
+    url: AJAX_URL,
+    method: "POST",
+    body: params.toString(),
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       "X-Requested-With": "XMLHttpRequest",
-      "Sec-Fetch-Dest": "empty",
-      "Sec-Fetch-Mode": "cors",
-      "Sec-Fetch-Site": "same-origin",
-      "Origin": BASE_URL,
       "Referer": BASE_URL,
+      "Origin": BASE_URL,
     },
+    headerGeneratorOptions: {
+      browsers: [{ name: "chrome", minVersion: 120 }],
+      devices: ["desktop"],
+      locales: ["id-ID"],
+      operatingSystems: ["windows"],
+    },
+    responseType: "json",
   });
-  return data;
+
+  return res.body;
 }
 
 async function getHome() {
