@@ -1,10 +1,10 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
 
-const BASE_URL = "https://otakudesu.blog";
+const BASE_URL = "https://otakudesu.cloud";
 const AJAX_URL = `${BASE_URL}/wp-admin/admin-ajax.php`;
 
-const headers = {
+const defaultHeaders = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
   "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8",
@@ -12,19 +12,17 @@ const headers = {
 };
 
 const fetchHTML = async (url) => {
-  const { data } = await axios.get(url, { headers, timeout: 15000 });
+  const { data } = await axios.get(url, { headers: defaultHeaders, timeout: 15000 });
   return cheerio.load(data);
 };
 
 module.exports = (app) => {
 
   // GET /otakudesu/home
-  // Daftar anime terbaru dari halaman utama
   app.get("/otakudesu/home", async (req, res) => {
     try {
       const $ = await fetchHTML(`${BASE_URL}/`);
-      const animeList = [];
-
+      const result = [];
       $(".venz ul li").each((_, el) => {
         const title = $(el).find("h2.jdlflm").first().text().trim();
         const thumbnail = $(el).find(".thumbz img").attr("src");
@@ -32,31 +30,8 @@ module.exports = (app) => {
         const episode = $(el).find(".epz").text().replace(/\s+/g, " ").trim();
         const day = $(el).find(".epztipe").text().replace(/\s+/g, " ").trim();
         const release = $(el).find(".newnime").text().trim();
-        if (title) animeList.push({ title, thumbnail, url, episode, day, release });
+        if (title) result.push({ title, thumbnail, url, episode, day, release });
       });
-
-      res.json({ status: true, total: animeList.length, result: animeList });
-    } catch (err) {
-      res.status(500).json({ status: false, error: err.message, code: err.response?.status || null });
-    }
-  });
-
-  // GET /otakudesu/ongoing
-  // Daftar anime ongoing
-  app.get("/otakudesu/ongoing", async (req, res) => {
-    try {
-      const $ = await fetchHTML(`${BASE_URL}/`);
-      const result = [];
-
-      $(".venz ul li").each((_, el) => {
-        const title = $(el).find(".jdlflm").text().trim();
-        const thumbnail = $(el).find("img").attr("src");
-        const url = $(el).find("a").attr("href");
-        const episode = $(el).find(".epz").text().trim();
-        const date = $(el).find(".newnime").text().trim();
-        if (title) result.push({ title, thumbnail, episode, date, url });
-      });
-
       res.json({ status: true, total: result.length, result });
     } catch (err) {
       res.status(500).json({ status: false, error: err.message, code: err.response?.status || null });
@@ -64,12 +39,10 @@ module.exports = (app) => {
   });
 
   // GET /otakudesu/anime-list
-  // Semua daftar anime (A-Z)
   app.get("/otakudesu/anime-list", async (req, res) => {
     try {
       const $ = await fetchHTML(`${BASE_URL}/anime-list/`);
       const result = [];
-
       $(".hodebgst").each((_, el) => {
         result.push({
           title: $(el).contents().first().text().trim(),
@@ -77,7 +50,6 @@ module.exports = (app) => {
           status: $(el).text().includes("On-Going") ? "On-Going" : "Completed",
         });
       });
-
       res.json({ status: true, total: result.length, result });
     } catch (err) {
       res.status(500).json({ status: false, error: err.message, code: err.response?.status || null });
@@ -85,63 +57,48 @@ module.exports = (app) => {
   });
 
   // GET /otakudesu/genre-list
-  // Semua genre yang tersedia
   app.get("/otakudesu/genre-list", async (req, res) => {
     try {
       const $ = await fetchHTML(`${BASE_URL}/genre-list/`);
-      const genres = [];
-
+      const result = [];
       $(".genres a").each((_, el) => {
-        genres.push({
+        result.push({
           name: $(el).text().trim(),
           url: new URL($(el).attr("href"), BASE_URL).href,
         });
       });
-
-      res.json({ status: true, total: genres.length, result: genres });
+      res.json({ status: true, total: result.length, result });
     } catch (err) {
       res.status(500).json({ status: false, error: err.message, code: err.response?.status || null });
     }
   });
 
   // GET /otakudesu/jadwal
-  // Jadwal rilis anime per hari
   app.get("/otakudesu/jadwal", async (req, res) => {
     try {
       const $ = await fetchHTML(`${BASE_URL}/jadwal-rilis/`);
       const result = {};
-
       $(".kglist321").each((_, el) => {
         const day = $(el).find("h2").first().text().trim();
-        const animeList = [];
-
-        $(el).find("ul li a").each((_, anime) => {
-          animeList.push({
-            title: $(anime).text().trim(),
-            url: $(anime).attr("href"),
-          });
+        const list = [];
+        $(el).find("ul li a").each((_, a) => {
+          list.push({ title: $(a).text().trim(), url: $(a).attr("href") });
         });
-
-        if (day && animeList.length) result[day] = animeList;
+        if (day && list.length) result[day] = list;
       });
-
       res.json({ status: true, result });
     } catch (err) {
       res.status(500).json({ status: false, error: err.message, code: err.response?.status || null });
     }
   });
 
-  // GET /otakudesu/episode?url=<episode_url>
-  // Detail episode: mirrors, downloads, info anime
+  // GET /otakudesu/episode?url=
   app.get("/otakudesu/episode", async (req, res) => {
     try {
       const { url } = req.query;
-      if (!url) {
-        return res.status(400).json({ status: false, message: "Masukkan parameter url (URL episode)" });
-      }
+      if (!url) return res.status(400).json({ status: false, message: "Masukkan parameter url" });
 
       const $ = await fetchHTML(url);
-
       const title = $("h1.posttl").text().trim();
       const metaSpans = $(".kategoz span");
       const postedBy = metaSpans.eq(0).text().trim();
@@ -163,24 +120,20 @@ module.exports = (app) => {
         const qualityClass = $(ulEl).attr("class") || "";
         const quality = qualityClass.replace(/[^0-9p]/g, "") || qualityClass;
         const servers = [];
-
         $(ulEl).find("li a").each((_, aEl) => {
           const serverName = $(aEl).text().trim();
           const dataContent = $(aEl).attr("data-content") || null;
           let decoded = null;
           if (dataContent) {
-            try {
-              decoded = JSON.parse(Buffer.from(dataContent, "base64").toString("utf-8"));
-            } catch { decoded = null; }
+            try { decoded = JSON.parse(Buffer.from(dataContent, "base64").toString("utf-8")); } catch {}
           }
           servers.push({ serverName, dataContent, decoded });
         });
-
-        if (servers.length > 0) mirrors.push({ quality, servers });
+        if (servers.length) mirrors.push({ quality, servers });
       });
 
       const downloads = [];
-      $(".download").find("ul").each((_, ulEl) => {
+      $(".download ul").each((_, ulEl) => {
         $(ulEl).find("li").each((_, liEl) => {
           const quality = $(liEl).find("strong").text().trim();
           const size = $(liEl).find("i").text().trim();
@@ -197,15 +150,14 @@ module.exports = (app) => {
         const text = $(pEl).text().trim();
         const colonIdx = text.indexOf(":");
         if (colonIdx === -1) return;
-        const key = text.slice(0, colonIdx).trim();
+        const key = text.slice(0, colonIdx).trim().toLowerCase();
         const value = text.slice(colonIdx + 1).trim();
-        if (key.toLowerCase() === "genres") {
+        if (key === "genres") {
           info.genres = $(pEl).find("a").map((_, a) => $(a).text().trim()).get();
         } else {
-          info[key.toLowerCase()] = value;
+          info[key] = value;
         }
       });
-
       info.thumbnail = $(".cukder img").first().attr("src") || null;
       info.detailUrl = $(".prevnext .flir a").first().attr("href") || null;
 
@@ -218,27 +170,21 @@ module.exports = (app) => {
     }
   });
 
-  // GET /otakudesu/stream?id=<id>&i=<i>&q=<quality>
-  // Ambil iframe stream dari mirror (gunakan decoded dari /episode)
+  // GET /otakudesu/stream?id=&i=&q=
   app.get("/otakudesu/stream", async (req, res) => {
     try {
       const { id, i, q } = req.query;
       if (!id || i === undefined || !q) {
-        return res.status(400).json({
-          status: false,
-          message: "Masukkan parameter: id, i, q (dari decoded mirror di endpoint /episode)",
-        });
+        return res.status(400).json({ status: false, message: "Masukkan parameter: id, i, q" });
       }
 
-      const ajaxHeaders = { ...headers, "Content-Type": "application/x-www-form-urlencoded" };
+      const ajaxHeaders = { ...defaultHeaders, "Content-Type": "application/x-www-form-urlencoded" };
 
-      // Step 1: get nonce
       const nonceParams = new URLSearchParams();
       nonceParams.append("action", "aa1208d27f29ca340c92c66d1926f13f");
       const nonceRes = await axios.post(AJAX_URL, nonceParams.toString(), { headers: ajaxHeaders });
       const nonce = nonceRes.data.data;
 
-      // Step 2: get stream
       const streamParams = new URLSearchParams();
       streamParams.append("id", id);
       streamParams.append("i", i);
