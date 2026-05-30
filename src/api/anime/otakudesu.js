@@ -1,32 +1,59 @@
-const cloudscraper = require("cloudscraper");
+const axios = require("axios");
 const cheerio = require("cheerio");
+const { HttpsProxyAgent } = require("https-proxy-agent");
 
 const BASE_URL = "https://otakudesu.blog";
 const AJAX_URL = "https://otakudesu.blog/wp-admin/admin-ajax.php";
 
-const defaultOpts = {
-  headers: {
-    "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8",
-    "Referer": BASE_URL,
-  },
+const PROXY_LIST = [
+  "31.59.20.176:6754:pdrjpkgm:z7wvu1pyr1re",
+  "198.23.239.134:6540:pdrjpkgm:z7wvu1pyr1re",
+  "45.38.107.97:6014:pdrjpkgm:z7wvu1pyr1re",
+  "107.172.163.27:6543:pdrjpkgm:z7wvu1pyr1re",
+  "198.105.121.200:6462:pdrjpkgm:z7wvu1pyr1re",
+  "216.10.27.159:6837:pdrjpkgm:z7wvu1pyr1re",
+  "142.111.67.146:5611:pdrjpkgm:z7wvu1pyr1re",
+  "191.96.254.138:6185:pdrjpkgm:z7wvu1pyr1re",
+  "31.58.9.4:6077:pdrjpkgm:z7wvu1pyr1re",
+  "23.26.71.145:5628:pdrjpkgm:z7wvu1pyr1re",
+];
+
+function getRandomAgent() {
+  const proxy = PROXY_LIST[Math.floor(Math.random() * PROXY_LIST.length)];
+  const [host, port, user, pass] = proxy.split(":");
+  return new HttpsProxyAgent(`http://${user}:${pass}@${host}:${port}`);
+}
+
+const headers = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Cache-Control": "no-cache",
+  "Referer": BASE_URL,
 };
 
 async function fetchHTML(url) {
-  const body = await cloudscraper.get({ uri: url, ...defaultOpts });
-  return cheerio.load(body);
+  const { data } = await axios.get(url, {
+    headers,
+    httpsAgent: getRandomAgent(),
+    timeout: 20000,
+  });
+  return cheerio.load(data);
 }
 
 async function fetchAjax(params) {
-  const body = await cloudscraper.post({
-    uri: AJAX_URL,
-    form: Object.fromEntries(params),
+  const { data } = await axios.post(AJAX_URL, params.toString(), {
     headers: {
-      ...defaultOpts.headers,
+      ...headers,
+      "Content-Type": "application/x-www-form-urlencoded",
       "X-Requested-With": "XMLHttpRequest",
       "Origin": BASE_URL,
     },
+    httpsAgent: getRandomAgent(),
+    timeout: 20000,
   });
-  return JSON.parse(body);
+  return data;
 }
 
 async function getHome() {
