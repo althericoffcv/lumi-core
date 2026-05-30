@@ -1,21 +1,64 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
+const { wrapper } = require("axios-cookiejar-support");
+const { CookieJar } = require("tough-cookie");
 
 const AJAX_URL = "https://otakudesu.blog/wp-admin/admin-ajax.php";
+const BASE_URL = "https://otakudesu.blog";
 
-const headers = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8",
-  Referer: "https://otakudesu.blog",
-};
+function createClient() {
+  const jar = new CookieJar();
+  const client = wrapper(axios.create({
+    jar,
+    timeout: 20000,
+    withCredentials: true,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+      "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache",
+      "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+      "Sec-Ch-Ua-Mobile": "?0",
+      "Sec-Ch-Ua-Platform": '"Windows"',
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "same-origin",
+      "Sec-Fetch-User": "?1",
+      "Upgrade-Insecure-Requests": "1",
+      "Referer": BASE_URL,
+    },
+  }));
+  return client;
+}
 
 async function fetchHTML(url) {
-  const { data } = await axios.get(url, { headers, timeout: 15000 });
+  const client = createClient();
+  await client.get(BASE_URL).catch(() => {});
+  const { data } = await client.get(url);
   return cheerio.load(data);
 }
 
+async function fetchAjax(params) {
+  const client = createClient();
+  await client.get(BASE_URL).catch(() => {});
+  const { data } = await client.post(AJAX_URL, params.toString(), {
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "X-Requested-With": "XMLHttpRequest",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
+      "Origin": BASE_URL,
+      "Referer": BASE_URL,
+    },
+  });
+  return data;
+}
+
 async function getHome() {
-  const $ = await fetchHTML("https://otakudesu.blog/");
+  const $ = await fetchHTML(BASE_URL + "/");
   const result = [];
   $(".venz ul li").each((_, el) => {
     const title = $(el).find("h2.jdlflm").first().text().trim();
@@ -30,7 +73,7 @@ async function getHome() {
 }
 
 async function getOngoing() {
-  const $ = await fetchHTML("https://otakudesu.blog/ongoing-anime/");
+  const $ = await fetchHTML(BASE_URL + "/ongoing-anime/");
   const result = [];
   $(".venz ul li").each((_, el) => {
     const title = $(el).find(".jdlflm").text().trim();
@@ -44,7 +87,7 @@ async function getOngoing() {
 }
 
 async function getAnimeList() {
-  const $ = await fetchHTML("https://otakudesu.blog/anime-list/");
+  const $ = await fetchHTML(BASE_URL + "/anime-list/");
   const result = [];
   $(".hodebgst").each((_, el) => {
     result.push({
@@ -57,19 +100,19 @@ async function getAnimeList() {
 }
 
 async function getGenre() {
-  const $ = await fetchHTML("https://otakudesu.blog/genre-list/");
+  const $ = await fetchHTML(BASE_URL + "/genre-list/");
   const result = [];
   $(".genres a").each((_, el) => {
     result.push({
       name: $(el).text().trim(),
-      url: new URL($(el).attr("href"), "https://otakudesu.blog").href,
+      url: new URL($(el).attr("href"), BASE_URL).href,
     });
   });
   return result;
 }
 
 async function getJadwal() {
-  const $ = await fetchHTML("https://otakudesu.blog/jadwal-rilis/");
+  const $ = await fetchHTML(BASE_URL + "/jadwal-rilis/");
   const result = {};
   $(".kglist321").each((_, el) => {
     const day = $(el).find("h2").first().text().trim();
@@ -205,11 +248,9 @@ async function getDetail(url) {
 }
 
 async function getStream(id, i, q) {
-  const ajaxHeaders = { ...headers, "Content-Type": "application/x-www-form-urlencoded" };
-
   const nonceParams = new URLSearchParams();
   nonceParams.append("action", "aa1208d27f29ca340c92c66d1926f13f");
-  const { data: nonceRes } = await axios.post(AJAX_URL, nonceParams.toString(), { headers: ajaxHeaders });
+  const nonceRes = await fetchAjax(nonceParams);
   const nonce = nonceRes.data;
 
   const streamParams = new URLSearchParams();
@@ -218,7 +259,7 @@ async function getStream(id, i, q) {
   streamParams.append("q", q);
   streamParams.append("nonce", nonce);
   streamParams.append("action", "2a3505c93b0035d3f455df82bf976b84");
-  const { data: streamRes } = await axios.post(AJAX_URL, streamParams.toString(), { headers: ajaxHeaders });
+  const streamRes = await fetchAjax(streamParams);
 
   const html = Buffer.from(streamRes.data, "base64").toString("utf-8");
   const $ = cheerio.load(html);
