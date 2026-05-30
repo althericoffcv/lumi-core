@@ -1,21 +1,36 @@
-const axios = require("axios");
+const cloudscraper = require("cloudscraper");
 const cheerio = require("cheerio");
 
+const BASE_URL = "https://otakudesu.blog";
 const AJAX_URL = "https://otakudesu.blog/wp-admin/admin-ajax.php";
 
-const headers = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8",
-  Referer: "https://otakudesu.blog",
+const defaultOpts = {
+  headers: {
+    "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8",
+    "Referer": BASE_URL,
+  },
 };
 
 async function fetchHTML(url) {
-  const { data } = await axios.get(url, { headers, timeout: 15000 });
-  return cheerio.load(data);
+  const body = await cloudscraper.get({ uri: url, ...defaultOpts });
+  return cheerio.load(body);
+}
+
+async function fetchAjax(params) {
+  const body = await cloudscraper.post({
+    uri: AJAX_URL,
+    form: Object.fromEntries(params),
+    headers: {
+      ...defaultOpts.headers,
+      "X-Requested-With": "XMLHttpRequest",
+      "Origin": BASE_URL,
+    },
+  });
+  return JSON.parse(body);
 }
 
 async function getHome() {
-  const $ = await fetchHTML("https://otakudesu.blog/");
+  const $ = await fetchHTML(BASE_URL + "/");
   const result = [];
   $(".venz ul li").each((_, el) => {
     const title = $(el).find("h2.jdlflm").first().text().trim();
@@ -30,7 +45,7 @@ async function getHome() {
 }
 
 async function getOngoing() {
-  const $ = await fetchHTML("https://otakudesu.blog/ongoing-anime/");
+  const $ = await fetchHTML(BASE_URL + "/ongoing-anime/");
   const result = [];
   $(".venz ul li").each((_, el) => {
     const title = $(el).find(".jdlflm").text().trim();
@@ -44,7 +59,7 @@ async function getOngoing() {
 }
 
 async function getAnimeList() {
-  const $ = await fetchHTML("https://otakudesu.blog/anime-list/");
+  const $ = await fetchHTML(BASE_URL + "/anime-list/");
   const result = [];
   $(".hodebgst").each((_, el) => {
     result.push({
@@ -57,19 +72,19 @@ async function getAnimeList() {
 }
 
 async function getGenre() {
-  const $ = await fetchHTML("https://otakudesu.blog/genre-list/");
+  const $ = await fetchHTML(BASE_URL + "/genre-list/");
   const result = [];
   $(".genres a").each((_, el) => {
     result.push({
       name: $(el).text().trim(),
-      url: new URL($(el).attr("href"), "https://otakudesu.blog").href,
+      url: new URL($(el).attr("href"), BASE_URL).href,
     });
   });
   return result;
 }
 
 async function getJadwal() {
-  const $ = await fetchHTML("https://otakudesu.blog/jadwal-rilis/");
+  const $ = await fetchHTML(BASE_URL + "/jadwal-rilis/");
   const result = {};
   $(".kglist321").each((_, el) => {
     const day = $(el).find("h2").first().text().trim();
@@ -84,7 +99,6 @@ async function getJadwal() {
 
 async function getEpisode(url) {
   const $ = await fetchHTML(url);
-
   const title = $("h1.posttl").text().trim();
   const metaSpans = $(".kategoz span");
   const postedBy = metaSpans.eq(0).text().trim();
@@ -152,7 +166,6 @@ async function getEpisode(url) {
 
 async function getDetail(url) {
   const $ = await fetchHTML(url);
-
   const title = $(".jdlrx h1").text().replace(/\s*<.*/, "").trim();
   const thumbnail = $(".fotoanime img").first().attr("src") || null;
 
@@ -205,11 +218,9 @@ async function getDetail(url) {
 }
 
 async function getStream(id, i, q) {
-  const ajaxHeaders = { ...headers, "Content-Type": "application/x-www-form-urlencoded" };
-
   const nonceParams = new URLSearchParams();
   nonceParams.append("action", "aa1208d27f29ca340c92c66d1926f13f");
-  const { data: nonceRes } = await axios.post(AJAX_URL, nonceParams.toString(), { headers: ajaxHeaders });
+  const nonceRes = await fetchAjax(nonceParams);
   const nonce = nonceRes.data;
 
   const streamParams = new URLSearchParams();
@@ -218,102 +229,58 @@ async function getStream(id, i, q) {
   streamParams.append("q", q);
   streamParams.append("nonce", nonce);
   streamParams.append("action", "2a3505c93b0035d3f455df82bf976b84");
-  const { data: streamRes } = await axios.post(AJAX_URL, streamParams.toString(), { headers: ajaxHeaders });
+  const streamRes = await fetchAjax(streamParams);
 
   const html = Buffer.from(streamRes.data, "base64").toString("utf-8");
   const $ = cheerio.load(html);
   const iframeSrc = $("iframe").attr("src") || null;
-
   return { iframeSrc, embedHtml: html };
 }
 
 module.exports = function (app) {
-
   app.get("/otakudesu/home", async (req, res) => {
-    try {
-      const data = await getHome();
-      res.json({ status: true, total: data.length, data });
-    } catch (err) {
-      res.status(500).json({ status: false, message: err.message });
-    }
+    try { const data = await getHome(); res.json({ status: true, total: data.length, data }); }
+    catch (err) { res.status(500).json({ status: false, message: err.message }); }
   });
 
   app.get("/otakudesu/ongoing", async (req, res) => {
-    try {
-      const data = await getOngoing();
-      res.json({ status: true, total: data.length, data });
-    } catch (err) {
-      res.status(500).json({ status: false, message: err.message });
-    }
+    try { const data = await getOngoing(); res.json({ status: true, total: data.length, data }); }
+    catch (err) { res.status(500).json({ status: false, message: err.message }); }
   });
 
   app.get("/otakudesu/animelist", async (req, res) => {
-    try {
-      const data = await getAnimeList();
-      res.json({ status: true, total: data.length, data });
-    } catch (err) {
-      res.status(500).json({ status: false, message: err.message });
-    }
+    try { const data = await getAnimeList(); res.json({ status: true, total: data.length, data }); }
+    catch (err) { res.status(500).json({ status: false, message: err.message }); }
   });
 
   app.get("/otakudesu/genre", async (req, res) => {
-    try {
-      const data = await getGenre();
-      res.json({ status: true, total: data.length, data });
-    } catch (err) {
-      res.status(500).json({ status: false, message: err.message });
-    }
+    try { const data = await getGenre(); res.json({ status: true, total: data.length, data }); }
+    catch (err) { res.status(500).json({ status: false, message: err.message }); }
   });
 
   app.get("/otakudesu/jadwal", async (req, res) => {
-    try {
-      const data = await getJadwal();
-      res.json({ status: true, data });
-    } catch (err) {
-      res.status(500).json({ status: false, message: err.message });
-    }
+    try { const data = await getJadwal(); res.json({ status: true, data }); }
+    catch (err) { res.status(500).json({ status: false, message: err.message }); }
   });
 
   app.get("/otakudesu/episode", async (req, res) => {
     const { url } = req.query;
-    if (!url) return res.status(400).json({
-      status: false,
-      message: "Parameter 'url' wajib diisi. Contoh: /otakudesu/episode?url=https://otakudesu.blog/episode/xxx/",
-    });
-    try {
-      const data = await getEpisode(url);
-      res.json({ status: true, data });
-    } catch (err) {
-      res.status(500).json({ status: false, message: err.message });
-    }
+    if (!url) return res.status(400).json({ status: false, message: "Parameter 'url' wajib diisi." });
+    try { res.json({ status: true, data: await getEpisode(url) }); }
+    catch (err) { res.status(500).json({ status: false, message: err.message }); }
   });
 
   app.get("/otakudesu/detail", async (req, res) => {
     const { url } = req.query;
-    if (!url) return res.status(400).json({
-      status: false,
-      message: "Parameter 'url' wajib diisi. Contoh: /otakudesu/detail?url=https://otakudesu.blog/anime/xxx/",
-    });
-    try {
-      const data = await getDetail(url);
-      res.json({ status: true, data });
-    } catch (err) {
-      res.status(500).json({ status: false, message: err.message });
-    }
+    if (!url) return res.status(400).json({ status: false, message: "Parameter 'url' wajib diisi." });
+    try { res.json({ status: true, data: await getDetail(url) }); }
+    catch (err) { res.status(500).json({ status: false, message: err.message }); }
   });
 
   app.get("/otakudesu/stream", async (req, res) => {
     const { id, i, q } = req.query;
-    if (!id || i === undefined || !q) return res.status(400).json({
-      status: false,
-      message: "Parameter 'id', 'i', dan 'q' wajib diisi. Contoh: /otakudesu/stream?id=195244&i=0&q=480p",
-    });
-    try {
-      const data = await getStream(id, i, q);
-      res.json({ status: true, data });
-    } catch (err) {
-      res.status(500).json({ status: false, message: err.message });
-    }
+    if (!id || i === undefined || !q) return res.status(400).json({ status: false, message: "Parameter 'id', 'i', 'q' wajib diisi." });
+    try { res.json({ status: true, data: await getStream(id, i, q) }); }
+    catch (err) { res.status(500).json({ status: false, message: err.message }); }
   });
-
 };
